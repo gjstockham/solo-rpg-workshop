@@ -1,0 +1,11 @@
+{
+  "name": "solo-rpg-forge",
+  "description": "Builds ruleset module plugins from rulebook PDFs, sets up Obsidian campaign vaults, and generates session-play skills.",
+  "version": "0.1.0",
+  "dependencies": [
+    "solo-rpg-core"
+  ],
+  "author": {
+    "name": "Geoff"
+  }
+}

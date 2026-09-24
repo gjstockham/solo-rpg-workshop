@@ -1,0 +1,3 @@
+staging/*
+!staging/.gitkeep
+__pycache__/

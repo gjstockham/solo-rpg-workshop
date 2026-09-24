@@ -1,0 +1,8 @@
+{
+  "name": "solo-rpg-core",
+  "description": "Auditable dice rolling, random-table lookups, record-keeping conventions and a cite-or-abstain rules lawyer for solo RPG play.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Geoff"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "solo-rpg-workshop",
+  "owner": {
+    "name": "Geoff"
+  },
+  "description": "Solo RPG record-keeping toolkit: core dice/table engine, the forge that builds ruleset modules, and the modules it builds.",
+  "plugins": [
+    {
+      "name": "solo-rpg-core",
+      "source": "./plugins/solo-rpg-core",
+      "description": "Auditable dice rolling, random-table lookups, record-keeping conventions and a cite-or-abstain rules lawyer."
+    },
+    {
+      "name": "solo-rpg-forge",
+      "source": "./plugins/solo-rpg-forge",
+      "description": "Builds ruleset modules from rulebook PDFs, sets up Obsidian campaign vaults, and generates session-play skills."
+    }
+  ]
+}
