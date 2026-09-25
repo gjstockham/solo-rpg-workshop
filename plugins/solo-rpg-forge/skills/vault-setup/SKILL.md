@@ -15,10 +15,14 @@ Never touch `.obsidian/`. Plugin installation and settings are the player's job.
 
 ## 1. Gather
 
-- `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/vault_tool.py" modules` lists the available modules
-  with their records, trackers, lists and procedures. Confirm the campaign name and module
-  set with the player. A game module usually pairs with a solo-engine module. Honour
-  `requires:`.
+- `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/vault_tool.py" modules` lists the modules in the
+  player's module library, with their records, trackers, lists and procedures. It finds the
+  library through `solo-rpg.yaml` → `library:`, or when the vault itself is the library. For
+  a new vault kept apart from the library, ask the player for the library folder (the one
+  where they ran `/solo-rpg-forge:ingest`). Pass it as `--library "<path>"` before the
+  subcommand on every `vault_tool.py` call until `init` has recorded it.
+  Confirm the campaign name and module set with the player. A game module usually pairs with
+  a solo-engine module. Honour `requires:`.
 - Survey what the vault already has: folders, existing notes, templates, and any frontmatter
   conventions (grep a few notes). **An existing vault is the player's structure. Adapt to it**
   and map module concepts onto the existing folders rather than imposing new ones.
@@ -64,18 +68,19 @@ only if the player uses Templater.
 
 1. Configuration (deterministic):
    ```
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/vault_tool.py" init --campaign "<name>" --modules <ids...>
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/vault_tool.py" [--library "<path>"] init --campaign "<name>" --modules <ids...>
    ```
-   This writes `solo-rpg.yaml`, creates `.solo-rpg/` (audit trail), and merges
-   `.claude/settings.json`. That enables core and exactly these modules, allows
-   `rpg-roll`/`rpg-table`, and denies edits to `.obsidian/` and `.solo-rpg/`. Use `--dry-run`
+   This writes `solo-rpg.yaml` (including `library:`, which the core scripts use to find the
+   module tables), creates `.solo-rpg/` (audit trail), and merges `.claude/settings.json`.
+   The settings register the library as a known marketplace, enable core and exactly these
+   modules, allow `rpg-roll`/`rpg-table`, and deny edits to `.obsidian/` and `.solo-rpg/`. Use `--dry-run`
    first if the vault already has `.claude/settings.json`, and show the diff.
    If you changed folder names, update `paths:` in `solo-rpg.yaml`.
 2. Folders, templates, `Campaign.md`, `House Rules.md` and dashboards, as approved.
 3. **`CLAUDE.md`** at the vault root, under ~150 lines:
    - Title and one line on the campaign, plus the active modules and what each is for.
    - The full play contract: copy it from the solo-rpg-core plugin's
-     `references/guardrails.md` (sibling of this plugin: `${CLAUDE_PLUGIN_ROOT}/../solo-rpg-core/references/guardrails.md`).
+     `references/guardrails.md`. `vault_tool.py guardrails` prints its path.
    - Vault map: each folder and template → what goes there. Where the current session is
      recorded (`solo-rpg.yaml` → `current_session`). Where house rules live.
    - The frontmatter conventions above, concisely.
@@ -86,6 +91,7 @@ only if the player uses Templater.
 
 ## 4. Hand-off
 
-List what was created, which community plugins to install, and the reminder to restart
-Claude Code in the vault (or run `/reload-plugins`) so the enabled modules load. Suggest
+List what was created and which community plugins to install. Remind the player to restart
+Claude Code in the vault so the enabled modules load. If Claude Code doesn't offer to install
+them, run `/plugin install <id>@<library name>` for each module. Suggest
 `/solo-rpg-forge:session-kit` next.

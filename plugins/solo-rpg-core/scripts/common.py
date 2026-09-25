@@ -38,15 +38,37 @@ def dump_yaml(data: Any) -> str:
     return yaml.safe_dump(data, sort_keys=False, allow_unicode=True, width=100)
 
 
-def library_root() -> Path:
-    """The marketplace 'plugins' directory holding core, forge and all modules.
+MARKET_FILE = Path(".claude-plugin") / "marketplace.json"
 
-    SOLO_RPG_LIBRARY overrides; otherwise it is the parent of this plugin
-    (the workshop marketplace is loaded in place, so siblings are visible).
+
+def _plugins_dir(p: Path) -> Path:
+    """Accept a library folder or its plugins/ folder; return the plugins/ folder."""
+    p = p.expanduser().resolve()
+    return p / "plugins" if (p / "plugins").is_dir() else p
+
+
+def library_root() -> Path:
+    """The 'plugins' folder of the player's module library (built by solo-rpg-forge).
+
+    The library is a folder the player owns, not this plugin's install location
+    (that is Claude Code's plugin cache). Discovery order:
+      1. SOLO_RPG_LIBRARY (library folder or its plugins/ folder)
+      2. `library:` in the campaign's solo-rpg.yaml, relative to the vault root
+      3. the nearest folder at or above cwd containing .claude-plugin/marketplace.json
+      4. this plugin's parent folder (source checkout of the workshop, for development)
     """
     env = os.environ.get("SOLO_RPG_LIBRARY")
     if env:
-        return Path(env).expanduser().resolve()
+        return _plugins_dir(Path(env))
+    root = find_campaign()
+    if root:
+        lib = (load_data(root / CAMPAIGN_FILE) or {}).get("library")
+        if lib:
+            return _plugins_dir(root / lib)
+    here = Path.cwd().resolve()
+    for d in [here, *here.parents]:
+        if (d / MARKET_FILE).exists() and (d / "plugins").is_dir():
+            return d / "plugins"
     return Path(__file__).resolve().parents[2]
 
 

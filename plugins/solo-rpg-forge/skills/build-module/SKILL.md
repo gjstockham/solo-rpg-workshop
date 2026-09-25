@@ -12,8 +12,15 @@ allowed-tools:
 # Build a module
 
 Module: $ARGUMENTS. Read `${CLAUDE_PLUGIN_ROOT}/references/module-spec.md` first. It defines
-every file you'll produce. Staging lives at `<workshop>/staging/<module-id>/`
-(`module_tool.py where` prints the paths).
+every file you'll produce.
+
+Everything is written into the player's **module library**, never into this plugin's folder.
+Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/module_tool.py" where` to get the paths. The module
+dir is `<library>/plugins/<module-id>/` and staging is `<library>/staging/<module-id>/`. If no
+library is found, the player is in the wrong folder, or needs `/solo-rpg-forge:ingest` first.
+
+Subagents can't expand `${CLAUDE_PLUGIN_ROOT}`, so pass them absolute paths: the module dir,
+the staging dir, and the forge root (the `forge:` line of `where`).
 
 The module will be used by a rules lawyer that may only cite what you write. **Omissions and
 paraphrase errors become wrong rulings at the table**, so accuracy beats speed at every step.
@@ -37,7 +44,7 @@ Create BUILD-STATE.md from the survey's plan.
 ### 2. Rules files (parallel)
 For each chapter whose plan is rules or lore, dispatch the **chapter-writer** agent. Batch
 three or four at a time, and give each one a chapter. Each call passes: module id, module
-dir, staging book dir, chapter title, PDF page range, page offset, target filename(s)
+dir, staging book dir, forge root, chapter title, PDF page range, page offset, target filename(s)
 (`rules/NN-slug.md`), and the table ids planned for that chapter (so it writes
 `→ table` pointers rather than copying tables). Each agent returns INDEX rows and glossary
 terms. Merge those into `rules/INDEX.md` and `rules/GLOSSARY.md` yourself, sorted and
@@ -71,7 +78,7 @@ templates in module-spec §6. The rules skill's description decides whether Clau
 the module, so pack it with the ruleset's distinctive terms.
 
 ### 7. Audit
-Dispatch the **module-auditor** agent with the module id, module dir and staging dir. It
+Dispatch the **module-auditor** agent with the module id, module dir, staging dir and forge root. It
 spot-checks tables and rules claims against the extracted pages and images, and writes
 `AUDIT.md`. Fix every confirmed discrepancy. For systematic errors, such as a whole chapter
 misreading two-column text, redo that unit.
@@ -81,7 +88,7 @@ misreading two-column text, redo that unit.
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/module_tool.py" check <id>
 rpg-table verify-report --module <id>
 ```
-Save the verify-report output to `plugins/<id>/VERIFY.md`. Update README.md with the sources,
+Save the verify-report output to `<library>/plugins/<id>/VERIFY.md`. Update README.md with the sources,
 the build date, known gaps and what the audit found.
 
 ### 9. Hand-off
@@ -90,8 +97,11 @@ Tell the player:
 - **Proof-reading**: VERIFY.md lists every table with its page. Once they've checked a table
   against the book, `rpg-table mark-verified <id>` records it. Unverified tables still work,
   and `rpg-table list` shows which are verified.
-- **Install**: `/plugin marketplace update solo-rpg-workshop`, then `/plugin install <id>@solo-rpg-workshop`
-  (or `/reload-plugins` if already installed). The module stays dormant until a vault enables it.
+- **Install**: the library is a local marketplace whose name is shown by `where`. The first
+  time, run `/plugin marketplace add <library path>`. After that, run
+  `/plugin marketplace update <library name>`, then `/plugin install <id>@<library name>`, or
+  `/reload-plugins` if the module is already installed. The module stays dormant until a vault
+  enables it.
 - **Next step**: `/solo-rpg-forge:vault-setup` in a campaign vault.
 
 ## Quality bar (check before hand-off)

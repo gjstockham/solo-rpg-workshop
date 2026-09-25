@@ -9,10 +9,10 @@ You audit a module you did not write. Assume there are errors and find them. Do 
 yourself; report them.
 
 ## Inputs
-Module id, module dir, staging dir(s).
+Module id, module dir, staging dir(s), forge root (all absolute paths).
 
 ## Checks
-1. **Structure**: `python3 <module dir>/../solo-rpg-forge/scripts/module_tool.py check <id>`,
+1. **Structure**: `python3 "<forge root>/scripts/module_tool.py" --library "<module dir>/../.." check <id>`,
    and `rpg-table validate --module <id>`.
 2. **Tables**: pick at least 25% of the tables, and at least 5, including every table marked
    complex in SURVEY.md. For each, compare every row against the page image and text: range

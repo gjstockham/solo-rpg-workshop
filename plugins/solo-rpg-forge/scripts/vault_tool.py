@@ -1,16 +1,22 @@
 #!/usr/bin/env python3
 """Deterministic helpers for campaign vaults (run from the vault root).
 
-  python vault_tool.py modules [ID ...]          summarise module manifests (records, trackers, lists, procedures)
-  python vault_tool.py init --campaign NAME --modules ID [ID ...] [--dry-run]
-        writes/merges solo-rpg.yaml, .claude/settings.json (enables plugins, permissions), .solo-rpg/
+  python vault_tool.py [--library PATH] modules [ID ...]   summarise module manifests (records, trackers, lists, procedures)
+  python vault_tool.py [--library PATH] init --campaign NAME --modules ID [ID ...] [--dry-run]
+        writes/merges solo-rpg.yaml (incl. `library:`), .claude/settings.json (registers the
+        module library marketplace, enables plugins, permissions), .solo-rpg/
   python vault_tool.py set-session "Sessions/2026-01-01 Session 01.md"
   python vault_tool.py status                    show campaign config + enabled plugins
+  python vault_tool.py guardrails                print the path of solo-rpg-core's play contract
+
+The module library is found as described in library.py (SOLO_RPG_LIBRARY, the vault's
+solo-rpg.yaml `library:`, or a marketplace folder at/above the working directory).
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -19,9 +25,10 @@ try:
 except ImportError:
     sys.exit("PyYAML is required: pip install pyyaml")
 
-HERE = Path(__file__).resolve()
-PLUGINS = HERE.parents[2]
-MARKET = "solo-rpg-workshop"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import library  # noqa: E402
+
+LIBRARY_ARG = None  # --library, set in main()
 
 DEFAULT_PATHS = {
     "sessions": "Sessions",
@@ -33,8 +40,11 @@ DEFAULT_PATHS = {
 
 
 def manifests(ids=None):
+    plugins = library.require_library(LIBRARY_ARG) / "plugins"
     out = {}
-    for d in sorted(PLUGINS.iterdir()):
+    if not plugins.exists():
+        return out
+    for d in sorted(plugins.iterdir()):
         mf = d / "module.yaml"
         if mf.exists():
             m = yaml.safe_load(mf.read_text(encoding="utf-8")) or {}
@@ -47,7 +57,7 @@ def manifests(ids=None):
 def cmd_modules(a):
     ms = manifests(a.ids or None)
     if not ms:
-        print(f"No modules found in {PLUGINS}")
+        print(f"No modules found in {library.require_library(LIBRARY_ARG) / 'plugins'}")
         return 1
     for mid, (d, m) in ms.items():
         print(f"## {mid} — {m.get('title')} ({m.get('kind')})  requires: {m.get('requires') or '-'}")
@@ -61,11 +71,16 @@ def cmd_modules(a):
     return 0
 
 
-def merge_settings(path: Path, modules, dry):
+def merge_settings(path: Path, modules, lib: Path, dry):
     s = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    market = library.market_name(lib)
+    # Register the player's library so a fresh clone of the vault can install its modules.
+    known = s.setdefault("extraKnownMarketplaces", {})
+    known[market] = {"source": {"source": "directory", "path": lib.as_posix()}}
     ep = s.setdefault("enabledPlugins", {})
-    for name in ["solo-rpg-core", *modules]:
-        ep[f"{name}@{MARKET}"] = True
+    ep[f"solo-rpg-core@{library.CORE_MARKET}"] = True
+    for name in modules:
+        ep[f"{name}@{market}"] = True
     perms = s.setdefault("permissions", {})
     allow = perms.setdefault("allow", [])
     for r in ["Bash(rpg-roll *)", "Bash(rpg-table *)"]:
@@ -93,12 +108,15 @@ def cmd_init(a):
         for req in ms[m][1].get("requires") or []:
             if req not in a.modules:
                 sys.exit(f"Module {m} requires {req}; add it to --modules")
-    root = Path.cwd()
+    root = Path.cwd().resolve()
+    lib = library.require_library(LIBRARY_ARG)
     cfg_path = root / "solo-rpg.yaml"
     cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {}
     cfg = cfg or {}
     cfg["campaign"] = a.campaign
     cfg["modules"] = list(a.modules)
+    # Relative when the library lives inside the vault, so the vault stays portable.
+    cfg["library"] = os.path.relpath(lib, root).replace("\\", "/") if lib.is_relative_to(root) else lib.as_posix()
     cfg.setdefault("current_session", None)
     paths = cfg.setdefault("paths", {})
     for k, v in DEFAULT_PATHS.items():
@@ -111,7 +129,15 @@ def cmd_init(a):
         cfg_path.write_text(txt, encoding="utf-8")
         (root / ".solo-rpg").mkdir(exist_ok=True)
         print(f"wrote {cfg_path}\nensured .solo-rpg/ (audit trail)")
-    merge_settings(root / ".claude" / "settings.json", a.modules, a.dry_run)
+    merge_settings(root / ".claude" / "settings.json", a.modules, lib, a.dry_run)
+    return 0
+
+
+def cmd_guardrails(a):
+    core = library.find_core()
+    if core is None:
+        sys.exit("solo-rpg-core not found. Is it installed? (or set SOLO_RPG_CORE)")
+    print(core / "references" / "guardrails.md")
     return 0
 
 
@@ -131,6 +157,7 @@ def cmd_set_session(a):
 def cmd_status(a):
     p = Path.cwd() / "solo-rpg.yaml"
     print(p.read_text(encoding="utf-8") if p.exists() else "no solo-rpg.yaml")
+    print(f"module library: {library.find_library(LIBRARY_ARG) or 'NOT FOUND'}")
     s = Path.cwd() / ".claude" / "settings.json"
     if s.exists():
         print(json.dumps(json.loads(s.read_text(encoding="utf-8")).get("enabledPlugins", {}), indent=2))
@@ -139,15 +166,19 @@ def cmd_status(a):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--library", help="module library folder (default: discovered)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("modules"); p.add_argument("ids", nargs="*")
     p = sub.add_parser("init"); p.add_argument("--campaign", required=True)
     p.add_argument("--modules", nargs="+", required=True); p.add_argument("--dry-run", action="store_true")
     p = sub.add_parser("set-session"); p.add_argument("path")
     sub.add_parser("status")
+    sub.add_parser("guardrails")
     a = ap.parse_args()
+    global LIBRARY_ARG
+    LIBRARY_ARG = a.library
     return {"modules": cmd_modules, "init": cmd_init, "set-session": cmd_set_session,
-            "status": cmd_status}[a.cmd](a)
+            "status": cmd_status, "guardrails": cmd_guardrails}[a.cmd](a)
 
 
 if __name__ == "__main__":

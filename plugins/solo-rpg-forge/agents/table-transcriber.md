@@ -11,7 +11,8 @@ the page exactly**.
 
 ## Inputs
 Module id and dir, staging book dir, output folder (`tables/<chapter-slug>/`), and a list of
-tables: title, printed page, PDF page, dice, and any notes from the survey.
+tables: title, printed page, PDF page, dice, and any notes from the survey. Paths are
+absolute. Write only inside the module dir.
 
 ## Method, per table
 1. Run `rpg-table schema` once to get the file format.

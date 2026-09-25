@@ -6,24 +6,27 @@ strictly as **record-keeper, dice box, table reader and rules lawyer**. Claude i
 | Plugin | What it is |
 |---|---|
 | `solo-rpg-core` | `rpg-roll` and `rpg-table` (on PATH while enabled), skills `roll`, `table`, `record`, `rules`, `interpret`, the `rules-lawyer` agent, and the play contract |
-| `solo-rpg-forge` | The meta layer: `ingest` → `build-module` turn a rulebook PDF into a **module plugin**; `vault-setup` and `session-kit` build a campaign vault around one or more modules |
-| *(your modules)* | Generated into `plugins/<module-id>/` and registered here automatically |
+| `solo-rpg-forge` | The builder: `ingest` → `build-module` turn a rulebook PDF into a **module plugin**; `vault-setup` and `session-kit` build a campaign vault around one or more modules |
+
+You install this marketplace once. The forge then writes everything it builds **into your own
+folders, never into this repo or the plugin cache**:
+
+| What | Where it's built |
+|---|---|
+| Ruleset modules (rules, tables, procedures, skills) | Your **module library**: a folder you choose that becomes your own private local marketplace |
+| Campaign config, templates, dashboards, `CLAUDE.md`, session skills | Your **campaign vault**: `.claude/skills/`, `.claude/settings.json`, `solo-rpg.yaml` |
 
 ## Install (once)
 
 1. Python 3.9+ and: `pip install pyyaml pdfplumber pypdf`
-2. Put this folder somewhere permanent, e.g. `~/solo-rpg-workshop`. Git is recommended,
-   since the modules you build are valuable.
-3. In Claude Code:
+2. In Claude Code:
    ```
-   /plugin marketplace add ~/solo-rpg-workshop
+   /plugin marketplace add gjstockham/solo-rpg-workshop
    /plugin install solo-rpg-core@solo-rpg-workshop
    /plugin install solo-rpg-forge@solo-rpg-workshop
    ```
-   A local-directory marketplace loads **in place**, so newly built modules and your edits
-   show up after `/reload-plugins`. Nothing is copied into a cache.
-4. Check: `rpg-roll 2d6` inside Claude Code (or run `plugins/solo-rpg-core/bin/rpg-roll 2d6`
-   in a terminal).
+   Install them at **user** scope so they're available in every folder.
+3. Check: `rpg-roll 2d6` inside Claude Code.
 
 On Windows, the `bin/` wrappers are bash scripts, which Claude Code runs via Git Bash. If
 `python3` resolves to the Microsoft Store stub, set `SOLO_RPG_PYTHON` to your real
@@ -31,21 +34,59 @@ interpreter path.
 
 ## Workflow
 
+### 1. Build a module (once per book), in your library folder
+
 ```
-Build a module (per book):        Per campaign vault:
-  /solo-rpg-forge:ingest book.pdf   cd <vault> && claude
-  (approve SURVEY.md)               /solo-rpg-forge:vault-setup "<name>" <module ids>
-  /solo-rpg-forge:build-module id   /solo-rpg-forge:session-kit
-  proof-read VERIFY.md              /session-start … /scene … /ask … /session-end
-  /plugin install id@solo-rpg-workshop
+mkdir ~/rpg-library && cd ~/rpg-library && claude
+/solo-rpg-forge:ingest ~/books/mygame.pdf      # first run offers to make this folder your library
+  (approve SURVEY.md)
+/solo-rpg-forge:build-module <id>
+  (proof-read plugins/<id>/VERIFY.md)
+/plugin marketplace add ~/rpg-library          # once per library
+/plugin install <id>@solo-rpg-library          # the name you gave the library
 ```
 
-- Run **ingest and build-module from the workshop folder**. Big books are resumable:
-  `BUILD-STATE.md` in `staging/<id>/` tracks progress across sessions.
-- Modules install **disabled**. Each vault enables only its own modules in
-  `.claude/settings.json`, so rules never leak between campaigns.
+The first ingest runs `module_tool.py init`, which turns the current folder into a library:
+
+```
+~/rpg-library/
+  .claude-plugin/marketplace.json   your marketplace (default name: solo-rpg-library)
+  plugins/<module-id>/              built modules, registered automatically
+  staging/<module-id>/              PDF extraction, SURVEY.md, BUILD-STATE.md (gitignored)
+```
+
+- Big books are resumable. `BUILD-STATE.md` tracks progress across sessions. Just re-run
+  `build-module` from the library folder.
+- Modules install **disabled**. Each vault enables only its own modules, so rules never leak
+  between campaigns.
 - Build solo engines and oracles as their own modules (`kind: solo-engine`), so the same one
   can be combined with any game.
+- Put the library under git (privately). The modules you build are valuable.
+- The library can be the vault itself if you only run one campaign. Obsidian will then show the
+  rules files too.
+
+### 2. Set up a campaign (once per vault), in your vault folder
+
+```
+cd <vault> && claude
+/solo-rpg-forge:vault-setup "<campaign>" <module ids>   # asks for your library path if it's elsewhere
+/solo-rpg-forge:session-kit
+/session-start … /scene … /ask … /session-end
+```
+
+`vault-setup` records the library in `solo-rpg.yaml` (`library:`) and registers it in
+`.claude/settings.json` (`extraKnownMarketplaces`). The core scripts use that entry to find
+tables, and a fresh clone of the vault uses it to offer to install its modules.
+
+### Finding the library
+
+The forge and the core scripts look in this order:
+
+1. The `SOLO_RPG_LIBRARY` environment variable (library folder).
+2. `library:` in the campaign's `solo-rpg.yaml`.
+3. The nearest folder at or above the working directory containing `.claude-plugin/marketplace.json`.
+
+The forge scripts also take `--library <path>`.
 
 ## Trust model
 
@@ -59,15 +100,18 @@ Build a module (per book):        Per campaign vault:
 
 ## Copyright
 
-Modules contain condensed and partly verbatim text from books you own. Keep this repository
-**private** and don't publish modules built from commercial books.
+Modules contain condensed and partly verbatim text from books you own. Keep your module
+library **private**, and don't publish modules built from commercial books. This repo ships
+only the tools and contains no book content.
 
-## Layout
+## Developing this repo
 
 ```
 .claude-plugin/marketplace.json
 plugins/solo-rpg-core/     bin/ scripts/ skills/ agents/ references/
 plugins/solo-rpg-forge/    scripts/ skills/ agents/ references/module-spec.md
-plugins/<module-id>/       (generated; see module-spec.md)
-staging/<module-id>/       (extraction output + SURVEY.md + BUILD-STATE.md; gitignored)
 ```
+
+To test local changes, add this checkout as a marketplace instead of the GitHub one
+(`/plugin marketplace add <path to checkout>`). Run the forge from a separate scratch folder.
+It refuses to build modules inside this repo.

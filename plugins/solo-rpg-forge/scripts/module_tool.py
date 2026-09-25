@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
-"""Scaffold, register and lint ruleset module plugins in the workshop marketplace.
+"""Scaffold, register and lint ruleset module plugins in the player's module library.
 
+  python module_tool.py init [--name NAME] [--owner NAME]   (make the current folder a module library)
   python module_tool.py scaffold MODULE_ID --title "Book Title" --kind game|solo-engine|supplement|setting
-  python module_tool.py register MODULE_ID          (add/update entry in marketplace.json)
+  python module_tool.py register MODULE_ID          (add/update entry in the library's marketplace.json)
   python module_tool.py check MODULE_ID             (lint structure; runs table validation)
-  python module_tool.py where                       (print workshop paths)
+  python module_tool.py where                       (print library paths)
 
+Every command except init works on the library found from the working directory
+(see library.py); --library PATH overrides. Nothing is ever written inside the forge plugin.
 MODULE_ID is kebab-case and becomes the plugin name (skills appear as /MODULE_ID:skill).
 """
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -22,11 +26,18 @@ try:
 except ImportError:
     sys.exit("PyYAML is required: pip install pyyaml")
 
-HERE = Path(__file__).resolve()
-PLUGINS = HERE.parents[2]
-ROOT = HERE.parents[3]
-MARKET = ROOT / ".claude-plugin" / "marketplace.json"
-CORE_TABLE = PLUGINS / "solo-rpg-core" / "scripts" / "table.py"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import library  # noqa: E402
+
+# Set by use_library() from the library that was found (or created).
+ROOT: Path = Path.cwd()
+PLUGINS: Path = ROOT / "plugins"
+MARKET: Path = ROOT / library.MARKET_FILE
+
+
+def use_library(root: Path) -> None:
+    global ROOT, PLUGINS, MARKET
+    ROOT, PLUGINS, MARKET = root, root / "plugins", root / library.MARKET_FILE
 
 MODULE_YAML = """\
 # Module manifest — read by solo-rpg-core scripts, vault-setup and session-kit.
@@ -72,8 +83,8 @@ PLUGIN_JSON = {
     "description": None,
     "version": "0.1.0",
     "defaultEnabled": False,
-    "dependencies": ["solo-rpg-core"],
-    "author": {"name": "Geoff"},
+    # Core lives in the forge's marketplace, not the player's library, so qualify it.
+    "dependencies": [f"solo-rpg-core@{library.CORE_MARKET}"],
 }
 
 RULES_INDEX = """\
@@ -89,10 +100,53 @@ Every rules file below is a faithful condensation of the book with `[p.N]` marke
 GLOSSARY = "# Glossary\n\nTerm — definition as the book uses it [p.N]\n"
 
 
+LIBRARY_README = """\
+# {name}
+
+My solo-rpg module library, built with solo-rpg-forge. Each folder in `plugins/` is a
+ruleset module (a Claude Code plugin). `staging/` holds PDF extractions and build state.
+
+Keep this folder **private**. Modules contain condensed and partly verbatim text from books I own.
+
+Register it once in Claude Code: `/plugin marketplace add {path}`
+"""
+
+GITIGNORE = "staging/\n__pycache__/\n"
+
+
 def load_market():
+    return json.loads(MARKET.read_text(encoding="utf-8"))
+
+
+def cmd_init(a):
+    root = Path.cwd().resolve()
+    if library.is_forge_source(root):
+        sys.exit("This is the solo-rpg-workshop source repo. Run init in your own folder instead.")
+    use_library(root)
     if MARKET.exists():
-        return json.loads(MARKET.read_text(encoding="utf-8"))
-    return {"name": "solo-rpg-workshop", "owner": {"name": "Geoff"}, "plugins": []}
+        print(f"{MARKET.relative_to(ROOT)} already exists; this folder is already a library "
+              f"(marketplace '{library.market_name(ROOT)}').")
+    else:
+        if a.name == library.CORE_MARKET:
+            sys.exit(f"'{library.CORE_MARKET}' is the forge's own marketplace name. Pick another.")
+        MARKET.parent.mkdir(parents=True, exist_ok=True)
+        m = {"name": a.name, "owner": {"name": a.owner},
+             "description": "Solo RPG ruleset modules built with solo-rpg-forge.",
+             # modules depend on solo-rpg-core from the forge's marketplace
+             "allowCrossMarketplaceDependenciesOn": [library.CORE_MARKET],
+             "plugins": []}
+        MARKET.write_text(json.dumps(m, indent=2) + "\n", encoding="utf-8")
+        print(f"created {MARKET.relative_to(ROOT)} (marketplace '{a.name}')")
+    for d in (PLUGINS, ROOT / "staging"):
+        d.mkdir(exist_ok=True)
+    extras = {ROOT / ".gitignore": GITIGNORE,
+              ROOT / "README.md": LIBRARY_README.format(name=library.market_name(ROOT), path=ROOT.as_posix())}
+    for p, content in extras.items():
+        if not p.exists():
+            p.write_text(content, encoding="utf-8")
+            print(f"created {p.relative_to(ROOT)}")
+    print(f"\nlibrary: {ROOT}\nNext, in Claude Code: /plugin marketplace add {ROOT.as_posix()}")
+    return 0
 
 
 def cmd_scaffold(a):
@@ -105,6 +159,8 @@ def cmd_scaffold(a):
     for sub in (".claude-plugin", "rules", "tables", "procedures", "skills/rules", "references"):
         (d / sub).mkdir(parents=True, exist_ok=True)
     pj = dict(PLUGIN_JSON, name=mid, description=f"Rules, tables and procedures for {a.title} (solo-rpg module)")
+    if load_market().get("owner"):
+        pj["author"] = load_market()["owner"]
     files = {
         d / ".claude-plugin" / "plugin.json": json.dumps(pj, indent=2) + "\n",
         d / "module.yaml": MODULE_YAML.format(id=mid, title=a.title, kind=a.kind),
@@ -198,8 +254,13 @@ def cmd_check(a):
     for w in warns:
         print(f"warn:  {w}")
     print("\n# tables")
-    env = dict(**__import__("os").environ, SOLO_RPG_LIBRARY=str(PLUGINS))
-    r = subprocess.run([sys.executable, str(CORE_TABLE), "validate", "--module", a.id], env=env)
+    core = library.find_core()
+    if core is None:
+        print(f"ERROR: solo-rpg-core not found (set SOLO_RPG_CORE); run `rpg-table validate --module {a.id}` yourself")
+        return 1
+    env = dict(os.environ, SOLO_RPG_LIBRARY=str(ROOT))
+    sys.stdout.flush()
+    r = subprocess.run([sys.executable, str(core / "scripts" / "table.py"), "validate", "--module", a.id], env=env)
     ok = not errs and r.returncode == 0
     print("\nRESULT:", "OK" if ok else "FIX ERRORS ABOVE")
     return 0 if ok else 1
@@ -207,7 +268,10 @@ def cmd_check(a):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--library", help="library folder (default: discovered from the working directory)")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("init"); p.add_argument("--name", default=library.DEFAULT_NAME)
+    p.add_argument("--owner", default=os.environ.get("USERNAME") or os.environ.get("USER") or "me")
     p = sub.add_parser("scaffold"); p.add_argument("id"); p.add_argument("--title", required=True)
     p.add_argument("--kind", choices=["game", "solo-engine", "supplement", "setting"], required=True)
     p.add_argument("--force", action="store_true")
@@ -215,8 +279,13 @@ def main():
     p = sub.add_parser("check"); p.add_argument("id")
     sub.add_parser("where")
     a = ap.parse_args()
+    if a.cmd == "init":
+        return cmd_init(a)
+    use_library(library.require_library(a.library))
     if a.cmd == "where":
-        print(f"workshop:    {ROOT}\nplugins:     {PLUGINS}\nmarketplace: {MARKET}\nstaging:     {ROOT / 'staging'}")
+        print(f"library:     {ROOT}\nmarketplace: {MARKET} (name: {library.market_name(ROOT)})\n"
+              f"plugins:     {PLUGINS}\nstaging:     {ROOT / 'staging'}\n"
+              f"forge:       {library.FORGE_ROOT}\ncore:        {library.find_core() or 'NOT FOUND'}")
         return 0
     return {"scaffold": cmd_scaffold, "register": cmd_register, "check": cmd_check}[a.cmd](a) or 0
 

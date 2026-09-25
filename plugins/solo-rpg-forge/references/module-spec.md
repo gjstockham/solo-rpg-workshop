@@ -1,8 +1,13 @@
 # Module specification
 
-A **module** is a Claude Code plugin in the workshop's `plugins/` folder that holds one ruleset.
-The ruleset can be a game, a solo engine, a supplement, or a setting book. Modules contain
-data and instructions only. All dice and table code lives in `solo-rpg-core`.
+A **module** is a Claude Code plugin that holds one ruleset. The ruleset can be a game, a
+solo engine, a supplement, or a setting book. Modules contain data and instructions only.
+All dice and table code lives in `solo-rpg-core`.
+
+Modules live in the player's **module library**: a folder they own that is also a local
+marketplace (`.claude-plugin/marketplace.json`). `module_tool.py init` creates one, and
+`module_tool.py where` prints its paths. Paths below are relative to `<library>/`. The forge
+never writes inside its own plugin folder.
 
 ## Contents
 1. Layout
@@ -16,8 +21,8 @@ data and instructions only. All dice and table code lives in `solo-rpg-core`.
 ## 1. Layout
 
 ```
-plugins/<module-id>/
-  .claude-plugin/plugin.json    name = module-id, defaultEnabled: false, dependencies: [solo-rpg-core]
+<library>/plugins/<module-id>/
+  .claude-plugin/plugin.json    name = module-id, defaultEnabled: false, dependencies: [solo-rpg-core@solo-rpg-workshop]
   module.yaml                   manifest (section 5)
   README.md                     sources, build log, known gaps
   VERIFY.md                     human proof-reading checklist (rpg-table verify-report)

@@ -3,7 +3,7 @@
   "owner": {
     "name": "Geoff"
   },
-  "description": "Solo RPG record-keeping toolkit: core dice/table engine, the forge that builds ruleset modules, and the modules it builds.",
+  "description": "Solo RPG record-keeping toolkit: the core dice/table engine and the forge that builds ruleset modules and campaign vaults in your own folders.",
   "plugins": [
     {
       "name": "solo-rpg-core",

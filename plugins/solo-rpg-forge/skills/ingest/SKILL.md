@@ -17,10 +17,18 @@ Input: $ARGUMENTS (PDF path, optional module id).
 
 ## 0. Preconditions
 
-- Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/module_tool.py" where` to find the workshop
-  root and staging folder. Use `python` if `python3` isn't available.
-- Check the dependencies: `python3 -c "import pdfplumber, pypdf, yaml"`. If they're missing,
-  show `pip install pdfplumber pypdf pyyaml` and stop.
+- Check the dependencies: `python3 -c "import pdfplumber, pypdf, yaml"`. Use `python` if
+  `python3` isn't available. If they're missing, show `pip install pdfplumber pypdf pyyaml`
+  and stop.
+- Find the player's **module library**, the folder where modules get built. It's never the
+  forge plugin's own folder. Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/module_tool.py" where`.
+  - If it prints a library, use its `plugins` and `staging` paths for everything below.
+  - If it says no library was found, offer to make the **current folder** the library. Show
+    the path and suggest a marketplace name (default `solo-rpg-library`). Once the player
+    confirms, run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/module_tool.py" init --name <name>`.
+    A separate folder, such as `~/rpg-library`, suits players with several campaigns. The
+    campaign vault itself works too, since Obsidian then shows the rules files. If the player
+    wants the library somewhere else, tell them to `cd` there and restart Claude Code.
 - Agree on three things with the player in one short exchange. Offer your best guess for each
   so they can just confirm:
   1. **Module id** (kebab-case, short; it becomes the plugin namespace).

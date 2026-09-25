@@ -10,13 +10,13 @@ A rules lawyer will later answer questions using **only** what you write, so a d
 or a mis-copied number becomes a wrong ruling at the table.
 
 ## Inputs (from the dispatcher)
-Module id and dir, staging book dir, chapter title, PDF page range, page offset
+Module id and dir, staging book dir, forge root, chapter title, PDF page range, page offset
 (printed = PDF − offset, or a note on irregular numbering), target filename(s), and the
-table ids planned for this chapter.
+table ids planned for this chapter. All paths are absolute. Write only inside the module dir.
 
 ## Method
-1. Read `<module dir>/../solo-rpg-forge/references/module-spec.md` §2 (rules files). If that
-   path doesn't resolve, the dispatcher will have pasted the rules.
+1. Read `<forge root>/references/module-spec.md` §2 (rules files). If the dispatcher didn't
+   give a forge root, it will have pasted the rules instead.
 2. Read the chapter from `<staging>/pages/pNNNN.txt`, one page at a time, in order.
    Check page images in `<staging>/images/` when the text looks jumbled: interleaved
    columns, sidebars cut into paragraphs, or table fragments.

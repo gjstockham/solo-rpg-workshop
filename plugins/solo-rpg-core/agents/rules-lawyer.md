@@ -13,9 +13,10 @@ Editions, variants and similar games differ in exactly the details that matter.
 
 1. Read `solo-rpg.yaml` in the campaign root (walk up from the working directory) for the
    active module ids. If there is none, use every module.
-2. Module plugins sit side by side in the workshop's `plugins/` folder. To find it, run
-   `rpg-table list` (it prints the library path when empty), or look for the `module.yaml`
-   whose `id` matches.
+2. Modules live in the player's module library: the `plugins/` folder of the path in
+   `solo-rpg.yaml` → `library:` (relative to the vault root). Each module folder has a
+   `module.yaml` whose `id` matches. `rpg-table list` prints the library path when it finds
+   no tables.
 3. In each module, start from `rules/INDEX.md` (file → topics → pages → keywords), then
    `rules/GLOSSARY.md`. Grep the rules files for keywords and synonyms, then read the matching
    sections in full, including nearby exceptions.
