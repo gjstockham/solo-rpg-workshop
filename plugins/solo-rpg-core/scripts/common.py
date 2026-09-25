@@ -38,42 +38,55 @@ def dump_yaml(data: Any) -> str:
     return yaml.safe_dump(data, sort_keys=False, allow_unicode=True, width=100)
 
 
-MARKET_FILE = Path(".claude-plugin") / "marketplace.json"
+SKILLS_DIR = Path(".claude") / "skills"
+MODULE_DATA = "reference"
 
 
-def _plugins_dir(p: Path) -> Path:
-    """Accept a library folder or its plugins/ folder; return the plugins/ folder."""
-    p = p.expanduser().resolve()
-    return p / "plugins" if (p / "plugins").is_dir() else p
+def vault_root(start: Optional[Path] = None) -> Path:
+    """The campaign vault: where the modules and the session notes live.
 
+    A module is a project skill in the vault, so everything is found relative to
+    the vault root rather than to this plugin (which lives in Claude Code's
+    plugin cache and is replaced on every update).
 
-def library_root() -> Path:
-    """The 'plugins' folder of the player's module library (built by solo-rpg-forge).
+      1. SOLO_RPG_VAULT
+      2. the nearest folder at or above cwd holding solo-rpg.yaml
+      3. the nearest folder at or above cwd holding .obsidian/ (vault not set up yet)
+      4. cwd
 
-    The library is a folder the player owns, not this plugin's install location
-    (that is Claude Code's plugin cache). Discovery order:
-      1. SOLO_RPG_LIBRARY (library folder or its plugins/ folder)
-      2. `library:` in the campaign's solo-rpg.yaml, relative to the vault root
-      3. the nearest folder at or above cwd containing .claude-plugin/marketplace.json
-      4. this plugin's parent folder (source checkout of the workshop, for development)
+    The search stops below the home directory: ~/.claude is Claude Code's own user
+    config, so the home folder must never be mistaken for a vault.
     """
-    env = os.environ.get("SOLO_RPG_LIBRARY")
+    env = os.environ.get("SOLO_RPG_VAULT")
     if env:
-        return _plugins_dir(Path(env))
-    root = find_campaign()
-    if root:
-        lib = (load_data(root / CAMPAIGN_FILE) or {}).get("library")
-        if lib:
-            return _plugins_dir(root / lib)
-    here = Path.cwd().resolve()
-    for d in [here, *here.parents]:
-        if (d / MARKET_FILE).exists() and (d / "plugins").is_dir():
-            return d / "plugins"
-    return Path(__file__).resolve().parents[2]
+        return Path(env).expanduser().resolve()
+    p = (start or Path.cwd()).resolve()
+    home = Path.home().resolve()
+    chain: List[Path] = []
+    for d in [p, *p.parents]:
+        if d != p and (d == home or d in home.parents):
+            break  # reached the home directory, or something above it
+        chain.append(d)
+    for marker in (CAMPAIGN_FILE, ".obsidian"):
+        for d in chain:
+            if (d / marker).exists():
+                return d
+    return p
+
+
+def modules_root() -> Path:
+    """The folder holding module skills: <vault>/.claude/skills."""
+    return vault_root() / SKILLS_DIR
+
+
+def module_data(mod_dir: Path) -> Path:
+    """A module's data folder (rules, tables, procedures) inside its skill."""
+    ref = mod_dir / MODULE_DATA
+    return ref if ref.is_dir() else mod_dir
 
 
 def find_campaign(start: Optional[Path] = None) -> Optional[Path]:
-    """Walk up from cwd looking for solo-rpg.yaml; return the vault root."""
+    """Walk up from cwd looking for solo-rpg.yaml; return the vault root, if set up."""
     p = (start or Path.cwd()).resolve()
     for d in [p, *p.parents]:
         if (d / CAMPAIGN_FILE).exists():
@@ -91,14 +104,14 @@ def campaign_config() -> Dict[str, Any]:
 
 
 def module_dirs(only: Optional[List[str]] = None) -> Dict[str, Path]:
-    """Map module id -> plugin dir for every plugin that has a module.yaml.
+    """Map module id -> skill dir for every skill in the vault with a module.yaml.
 
     If `only` is None and a campaign config lists modules, restrict to those.
     """
     if only is None:
         only = campaign_config().get("modules") or None
     out: Dict[str, Path] = {}
-    root = library_root()
+    root = modules_root()
     if not root.exists():
         return out
     for d in sorted(root.iterdir()):

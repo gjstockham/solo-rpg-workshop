@@ -11,16 +11,17 @@ allowed-tools:
 # Set up a campaign vault
 
 Run from the vault root (the folder containing `.obsidian/`). Input: $ARGUMENTS.
-Never touch `.obsidian/`. Plugin installation and settings are the player's job.
+Never touch `.obsidian/`. Obsidian plugin installation and settings are the player's job.
+
+This runs after at least one module has been built here with `/solo-rpg-forge:ingest` and
+`/solo-rpg-forge:build-module`, because the vault structure is designed from the module
+manifests.
 
 ## 1. Gather
 
-- `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/vault_tool.py" modules` lists the modules in the
-  player's module library, with their records, trackers, lists and procedures. It finds the
-  library through `solo-rpg.yaml` → `library:`, or when the vault itself is the library. For
-  a new vault kept apart from the library, ask the player for the library folder (the one
-  where they ran `/solo-rpg-forge:ingest`). Pass it as `--library "<path>"` before the
-  subcommand on every `vault_tool.py` call until `init` has recorded it.
+- `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/vault_tool.py" modules` lists the modules already
+  built in this vault, with their records, trackers, lists and procedures. If it reports
+  none, the player needs `/solo-rpg-forge:ingest` first.
   Confirm the campaign name and module set with the player. A game module usually pairs with
   a solo-engine module. Honour `requires:`.
 - Survey what the vault already has: folders, existing notes, templates, and any frontmatter
@@ -68,14 +69,15 @@ only if the player uses Templater.
 
 1. Configuration (deterministic):
    ```
-   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/vault_tool.py" [--library "<path>"] init --campaign "<name>" --modules <ids...>
+   python3 "${CLAUDE_PLUGIN_ROOT}/scripts/vault_tool.py" init --campaign "<name>" --modules <ids...>
    ```
-   This writes `solo-rpg.yaml` (including `library:`, which the core scripts use to find the
-   module tables), creates `.solo-rpg/` (audit trail), and merges `.claude/settings.json`.
-   The settings register the library as a known marketplace, enable core and exactly these
-   modules, allow `rpg-roll`/`rpg-table`, and deny edits to `.obsidian/` and `.solo-rpg/`. Use `--dry-run`
-   first if the vault already has `.claude/settings.json`, and show the diff.
-   If you changed folder names, update `paths:` in `solo-rpg.yaml`.
+   This writes `solo-rpg.yaml`, creates `.solo-rpg/` (audit trail), and merges
+   `.claude/settings.json` to allow `rpg-roll`/`rpg-table` and deny edits to `.obsidian/`
+   and the audit trail. Use `--dry-run` first if the vault already has
+   `.claude/settings.json`, and show the diff. If you changed folder names, update `paths:`
+   in `solo-rpg.yaml`.
+   `modules:` lists the campaign's active modules. A module skill present in the vault but
+   not listed still loads, but the core scripts ignore its tables.
 2. Folders, templates, `Campaign.md`, `House Rules.md` and dashboards, as approved.
 3. **`CLAUDE.md`** at the vault root, under ~150 lines:
    - Title and one line on the campaign, plus the active modules and what each is for.
@@ -87,11 +89,17 @@ only if the player uses Templater.
    - Any division of labour agreed with a system-specific Obsidian plugin.
    - "Session commands: see `.claude/skills/`" (filled in by session-kit).
    If a CLAUDE.md already exists, merge into it under clear headings rather than overwriting.
-4. Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/vault_tool.py" status` and show the result.
+4. **`.claude/agents/rules-lawyer.md`**: a vault-specific copy of the core `rules-lawyer`
+   agent (project agents take precedence over plugin ones), naming this campaign's modules
+   and the exact paths to their `reference/rules/` folders and the house-rules note, so it
+   doesn't have to search for them. Keep its cite-or-abstain contract word for word; only
+   the "Where the rules are" section changes. Skip this if the player already has their own
+   `rules-lawyer` agent, and say so.
+5. Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/vault_tool.py" status` and show the result.
 
 ## 4. Hand-off
 
-List what was created and which community plugins to install. Remind the player to restart
-Claude Code in the vault so the enabled modules load. If Claude Code doesn't offer to install
-them, run `/plugin install <id>@<library name>` for each module. Suggest
+List what was created and which community Obsidian plugins to install. Remind the player to
+run `/reload-plugins` (or restart Claude Code) so the new project skills and the rules-lawyer
+agent load. Suggest
 `/solo-rpg-forge:session-kit` next.

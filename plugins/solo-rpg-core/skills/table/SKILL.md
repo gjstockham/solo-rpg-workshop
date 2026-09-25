@@ -7,7 +7,7 @@ allowed-tools: Bash(rpg-table *)
 
 # Random tables
 
-Tables live as validated data files inside the module plugins. `rpg-table` rolls the dice and
+Tables live as validated data files inside the vault's module skills. `rpg-table` rolls the dice and
 finds the row itself, so the answer is always the transcribed book text with its page reference.
 Claude never paraphrases, picks, or "remembers" a table row.
 

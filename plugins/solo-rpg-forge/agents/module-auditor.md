@@ -12,21 +12,21 @@ yourself; report them.
 Module id, module dir, staging dir(s), forge root (all absolute paths).
 
 ## Checks
-1. **Structure**: `python3 "<forge root>/scripts/module_tool.py" --library "<module dir>/../.." check <id>`,
-   and `rpg-table validate --module <id>`.
+1. **Structure**: `python3 "<forge root>/scripts/module_tool.py" check <id>` from the vault
+   root, and `rpg-table validate --module <id>`.
 2. **Tables**: pick at least 25% of the tables, and at least 5, including every table marked
    complex in SURVEY.md. For each, compare every row against the page image and text: range
    boundaries, dice, result wording, and chained targets.
-3. **Rules**: for each rules file, pick 5 claims involving numbers, conditions or exceptions,
+3. **Rules**: for each file in `reference/rules/`, pick 5 claims involving numbers, conditions or exceptions,
    and verify them against the cited page. Also check the citation is the right printed page.
 4. **Coverage**: sample 5 pages of rules-category chapters at random. Is every mechanical
-   rule on those pages present somewhere in rules/?
+   rule on those pages present somewhere in `reference/rules/`?
 5. **Procedures**: for each one, confirm step order and cited pages, that tables and trackers
    are referenced by existing ids, and that no step asks Claude to invent content.
 6. **Contract**: grep the skills and procedures for instructions to describe, narrate, name or
    decide things. Those are defects.
 
-## Output: `<module dir>/AUDIT.md`
+## Output: `<module dir>/reference/AUDIT.md`
 ```
 # Audit: <id> — <date>
 Summary: N checks, N defects (N critical)

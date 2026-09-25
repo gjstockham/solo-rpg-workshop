@@ -10,7 +10,7 @@ The player will trust these results without looking at the book, so **every row 
 the page exactly**.
 
 ## Inputs
-Module id and dir, staging book dir, output folder (`tables/<chapter-slug>/`), and a list of
+Module id and dir, staging book dir, output folder (`reference/tables/<chapter-slug>/`), and a list of
 tables: title, printed page, PDF page, dice, and any notes from the survey. Paths are
 absolute. Write only inside the module dir.
 

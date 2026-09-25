@@ -33,7 +33,8 @@ import dice  # noqa: E402
 
 SCHEMA = r"""
 TABLE FILE FORMAT (YAML; one table per file, or several under a top-level `tables:` list)
-Files live in <module-plugin>/tables/ (subfolders allowed). File name is free; `id` matters.
+Files live in <vault>/.claude/skills/<module-id>/reference/tables/ (subfolders allowed).
+The file name is free; `id` is what matters.
 
 id: encounter-example        # kebab-case, unique within the module (required)
 title: Example Encounters    # as printed in the book (required)
@@ -124,7 +125,7 @@ class Table:
 
 
 def _iter_table_files(mod_dir: Path):
-    tdir = mod_dir / "tables"
+    tdir = common.module_data(mod_dir) / "tables"
     if not tdir.exists():
         return
     for p in sorted(tdir.rglob("*")):
@@ -164,7 +165,7 @@ def resolve(tables: Dict[str, Table], ref: str, context_module: Optional[str] = 
 
 
 def verified_set(mod_dir: Path) -> Dict[str, str]:
-    p = mod_dir / "tables" / "VERIFIED.yaml"
+    p = common.module_data(mod_dir) / "tables" / "VERIFIED.yaml"
     if not p.exists():
         return {}
     return common.load_data(p) or {}
@@ -465,7 +466,7 @@ def main(argv=None) -> int:
             ver = "✓" if t.id in verified_set(mods.get(t.module, Path("."))) else " "
             print(f"{ver} {fq:45} {t.data.get('dice', '?'):8} {t.title}  ({t.source})")
         if not tables:
-            print("No tables found. Library:", common.library_root())
+            print("No tables found. Modules are looked for in:", common.modules_root())
         return 0
 
     if a.cmd == "verify-report":
@@ -485,7 +486,7 @@ def main(argv=None) -> int:
         mods = common.module_dirs(None)
         for ref in a.ids:
             t = resolve(tables, ref)
-            p = mods[t.module] / "tables" / "VERIFIED.yaml"
+            p = common.module_data(mods[t.module]) / "tables" / "VERIFIED.yaml"
             data = verified_set(mods[t.module])
             data[t.id] = common.now()
             p.write_text(common.dump_yaml(data), encoding="utf-8")

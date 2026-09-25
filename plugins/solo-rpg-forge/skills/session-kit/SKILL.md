@@ -13,21 +13,25 @@ allowed-tools:
 
 Run from a vault that has `solo-rpg.yaml`. Input: $ARGUMENTS.
 
-Output: a few **project skills** in `<vault>/.claude/skills/` that run this campaign's sessions,
-plus a composed `.claude/session-loop.md` that they share. They are project skills, not plugin
-skills, because the flow depends on the combination of modules and on the player's own habits.
+Output: a few more **project skills** in `<vault>/.claude/skills/` that run this campaign's
+sessions, plus a composed `.claude/session-loop.md` that they share. The flow depends on the
+combination of modules and on the player's own habits, so these are generated per vault
+rather than shipped.
+
+They sit alongside the module skills already in `.claude/skills/`, so check the directory
+first and don't clobber a module or a skill of the player's own.
 
 ## 1. Read
 
 - `solo-rpg.yaml`, the vault `CLAUDE.md`, and `vault_tool.py modules <active ids>` for the manifests.
 - Every procedure file for `when` values `session-start`, `scene`, `encounter`, `downtime`,
-  `session-end` and `on-demand` (paths from the manifests' module dirs).
+  `session-end` and `on-demand` (in each module's `reference/procedures/`).
 - The templates and folders the vault actually uses.
 
 ## 2. Compose the loop
 
 Write `.claude/session-loop.md`: the campaign's play loop as numbered phases. Each step either
-**calls** a module procedure by `<module-id>:<procedure-id>` or is a step-tagged line
+**calls** a module procedure by `<module-id>/<procedure-id>` or is a step-tagged line
 (module-spec §4, tags CHOICE/ROLL/TABLE/RULE/RECORD/BRANCH) with `[module p.N]` citations.
 
 Where modules overlap, don't guess. Common overlaps:
@@ -43,8 +47,8 @@ Apply $ARGUMENTS (the player's requested changes) on top.
 
 ## 3. Generate skills
 
-Create these in `.claude/skills/<name>/SKILL.md`. Short names are fine because project skills
-aren't namespaced. Check `ls .claude/skills` first so you don't clobber the player's own skills.
+Create these in `.claude/skills/<name>/SKILL.md`. Short names are fine, but check
+`ls .claude/skills` first: the module skills live there too.
 
 | Skill | Invocation | Does |
 |---|---|---|
@@ -62,8 +66,8 @@ Every generated skill must:
 - Stop at every [CHOICE].
 - Carry `disable-model-invocation: true`, except `status`, and an `argument-hint`.
 
-Module procedures that the player may call directly are already plugin skills
-(`/<module-id>:<procedure-id>`). Don't duplicate them. Mention them in the CLAUDE.md
+Module procedures that the player may call directly already have runner skills
+(`/<module-id>-<procedure-id>`). Don't duplicate them. Mention them in the CLAUDE.md
 "Session commands" section instead.
 
 ## 4. Update CLAUDE.md

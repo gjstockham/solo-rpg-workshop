@@ -1,13 +1,13 @@
 # Module specification
 
-A **module** is a Claude Code plugin that holds one ruleset. The ruleset can be a game, a
-solo engine, a supplement, or a setting book. Modules contain data and instructions only.
-All dice and table code lives in `solo-rpg-core`.
+A **module** is one ruleset — a game, a solo engine, a supplement, or a setting book — built
+as a **project skill inside the player's own vault**. Modules contain data and instructions
+only. All dice and table code lives in `solo-rpg-core`.
 
-Modules live in the player's **module library**: a folder they own that is also a local
-marketplace (`.claude-plugin/marketplace.json`). `module_tool.py init` creates one, and
-`module_tool.py where` prints its paths. Paths below are relative to `<library>/`. The forge
-never writes inside its own plugin folder.
+Because a module is a project skill, there is nothing to install, enable or reload: it loads
+because the vault is the project. Paths below are relative to the vault root, which
+`module_tool.py where` prints. The forge never writes inside its own plugin folder (once
+installed, that's Claude Code's plugin cache and is replaced on every update).
 
 ## Contents
 1. Layout
@@ -21,23 +21,33 @@ never writes inside its own plugin folder.
 ## 1. Layout
 
 ```
-<library>/plugins/<module-id>/
-  .claude-plugin/plugin.json    name = module-id, defaultEnabled: false, dependencies: [solo-rpg-core@solo-rpg-workshop]
-  module.yaml                   manifest (section 5)
-  README.md                     sources, build log, known gaps
-  VERIFY.md                     human proof-reading checklist (rpg-table verify-report)
-  rules/INDEX.md                file → topics → printed pages → keywords
-  rules/GLOSSARY.md             game terms, one line each, with [p.N]
-  rules/NN-<slug>.md            condensed rules by chapter or topic
-  tables/<group>/<table-id>.yaml
-  tables/VERIFIED.yaml          written by `rpg-table mark-verified`
-  procedures/<procedure-id>.md
-  skills/rules/SKILL.md         module knowledge (auto-triggered)
-  skills/<procedure-id>/SKILL.md   one per player-facing procedure (player-invoked)
+<vault>/
+  pdfs/<book>.pdf                        the player's own books
+  .claude/skills/<module-id>/            THE MODULE (one skill)
+    SKILL.md                             module knowledge, auto-triggered (section 6)
+    module.yaml                          manifest (section 5)
+    reference/
+      README.md                          sources, build log, known gaps
+      VERIFY.md                          human proof-reading checklist (rpg-table verify-report)
+      AUDIT.md                           written by the module-auditor agent
+      rules/INDEX.md                     file → topics → printed pages → keywords
+      rules/GLOSSARY.md                  game terms, one line each, with [p.N]
+      rules/NN-<slug>.md                 condensed rules by chapter or topic
+      tables/<group>/<table-id>.yaml
+      tables/VERIFIED.yaml               written by `rpg-table mark-verified`
+      procedures/<procedure-id>.md
+  .claude/skills/<module-id>-<procedure-id>/SKILL.md   one per player-facing procedure
+  .solo-rpg/staging/<module-id>/         extraction, SURVEY.md, BUILD-STATE.md (build only)
 ```
 
-`defaultEnabled: false` keeps modules dormant until a campaign vault enables them in
-`.claude/settings.json`. That way one vault's rules never leak into another.
+Inside `SKILL.md`, refer to the module's own files through `${CLAUDE_SKILL_DIR}/reference/...`,
+which resolves wherever the vault sits. A runner skill for a procedure lives in its own
+directory (one skill per directory), so it reaches the module's data through
+`${CLAUDE_PROJECT_DIR}/.claude/skills/<module-id>/reference/...`.
+
+Each vault holds only the modules that campaign uses, so rules never leak between campaigns
+and there is no enable/disable step. A module is moved to another vault by copying its skill
+folder, but re-ingesting the PDF there is usually simpler and always current.
 
 ## 2. Rules files
 
@@ -57,10 +67,10 @@ Purpose: let the rules lawyer answer precisely without the PDF.
 - **Cross-references** use `(see 03-combat.md § Cover)`.
 - **Tables are not copied into rules files.** Write `→ table \`<table-id>\`` where the table
   sits in the text, together with any usage conditions or modifiers from the surrounding prose.
-- **Lore and setting chapters** go in `rules/lore-*.md` using the same format but condensed
+- **Lore and setting chapters** go in `reference/rules/lore-*.md` using the same format but condensed
   harder. The INDEX marks them as lore, so the rules lawyer can deprioritise them.
 
-`rules/INDEX.md` row format:
+`reference/rules/INDEX.md` row format:
 `| 03-combat.md | initiative, attacks, damage, cover, morale | 40-58 | attack, hit, wound, armour, flee |`
 Keywords should include synonyms a player might type, not only the book's terms.
 
@@ -80,7 +90,7 @@ Format: run `rpg-table schema`. Transcription rules:
   Say which in `notes`.
 - Tables that are really lookup charts (no die, e.g. a cost list) are **not** tables.
   They go in the rules file as markdown.
-- Group files by chapter: `tables/<chapter-slug>/<id>.yaml`.
+- Group files by chapter: `reference/tables/<chapter-slug>/<id>.yaml`.
 
 ## 4. Procedures
 
@@ -123,18 +133,25 @@ book defines the formula, and record that formula in the field's `note`.
 
 ## 6. Generated skills
 
-### skills/rules/SKILL.md (knowledge, auto-triggered)
+Both are project skills in the vault, so the directory name is the slash command. Keep the
+directory names distinct from anything already in `.claude/skills/`.
+
+### .claude/skills/<module-id>/SKILL.md (knowledge, auto-triggered)
+
+The scaffold writes this with a TODO description; replace it. The description decides whether
+Claude consults the module at all, so pack it with the ruleset's distinctive terms.
 
 ```markdown
 ---
-name: rules
+name: <module-id>
 description: <Ruleset title> rules reference — <6-12 key topics>. Use whenever play, a procedure or the player touches <ruleset title> mechanics, terms (<3-6 distinctive terms>) or tables, even if the question seems simple.
 user-invocable: false
 ---
 # <Ruleset title>
 
-Module files: `${CLAUDE_PLUGIN_ROOT}` — rules in `rules/` (start at `rules/INDEX.md`),
-tables via `rpg-table list --module <module-id>`, procedures in `procedures/`.
+Module data: `${CLAUDE_SKILL_DIR}/reference/` — rules in `reference/rules/` (start at
+`reference/rules/INDEX.md`), procedures in `reference/procedures/`, tables via
+`rpg-table list --module <module-id>`.
 
 Core loop in one paragraph (condensed, cited).
 Dice conventions (cited).
@@ -142,16 +159,20 @@ Procedure list: id — when — one line.
 For any non-trivial rules question, use /solo-rpg-core:rules (cite-or-abstain).
 ```
 
-### skills/<procedure-id>/SKILL.md (player-invoked runner)
+### .claude/skills/<module-id>-<procedure-id>/SKILL.md (player-invoked runner)
 
 ```markdown
 ---
-name: <procedure-id>
+name: <module-id>-<procedure-id>
 description: Run the <procedure title> procedure from <ruleset title> step by step.
 disable-model-invocation: true
 argument-hint: "<inputs>"
+allowed-tools:
+  - Bash(rpg-roll *)
+  - Bash(rpg-table *)
 ---
-Run `${CLAUDE_PLUGIN_ROOT}/procedures/<procedure-id>.md` for: $ARGUMENTS
+Run `${CLAUDE_PROJECT_DIR}/.claude/skills/<module-id>/reference/procedures/<procedure-id>.md`
+for: $ARGUMENTS
 
 Follow the steps in order. For [ROLL] and [TABLE] steps, use the scripts with --label and
 --log (the current session note is in solo-rpg.yaml → current_session). At [CHOICE],
@@ -164,8 +185,8 @@ are only reached from another procedure stay as files.
 
 ## 7. Naming and size limits
 
-- Module id: `<short-title>` or `<short-title>-<edition>`, kebab-case. It is the plugin
-  namespace, so keep it short.
+- Module id: `<short-title>` or `<short-title>-<edition>`, kebab-case. It is the skill name
+  the player types, so keep it short.
 - A rules file should stay under about 400 lines. Split big chapters by topic.
 - A skill description should stay under 1,000 characters. Put distinctive terms in it so it
   triggers.

@@ -20,15 +20,12 @@ Input: $ARGUMENTS (PDF path, optional module id).
 - Check the dependencies: `python3 -c "import pdfplumber, pypdf, yaml"`. Use `python` if
   `python3` isn't available. If they're missing, show `pip install pdfplumber pypdf pyyaml`
   and stop.
-- Find the player's **module library**, the folder where modules get built. It's never the
-  forge plugin's own folder. Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/module_tool.py" where`.
-  - If it prints a library, use its `plugins` and `staging` paths for everything below.
-  - If it says no library was found, offer to make the **current folder** the library. Show
-    the path and suggest a marketplace name (default `solo-rpg-library`). Once the player
-    confirms, run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/module_tool.py" init --name <name>`.
-    A separate folder, such as `~/rpg-library`, suits players with several campaigns. The
-    campaign vault itself works too, since Obsidian then shows the rules files. If the player
-    wants the library somewhere else, tell them to `cd` there and restart Claude Code.
+- Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/module_tool.py" where` and use the paths it
+  prints for everything below. Everything is built inside the player's **vault** (the folder
+  Claude Code was started in), never inside this plugin.
+  - Confirm the vault it found is the one the player means. If they're in the wrong folder,
+    they need to `cd` to the vault and restart Claude Code.
+  - The PDF path in $ARGUMENTS is usually `pdfs/<book>.pdf`. Any readable path works.
 - Agree on three things with the player in one short exchange. Offer your best guess for each
   so they can just confirm:
   1. **Module id** (kebab-case, short; it becomes the plugin namespace).
@@ -40,7 +37,7 @@ Input: $ARGUMENTS (PDF path, optional module id).
 ## 1. Extract
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pdf_extract.py" "<pdf>" --out "<staging>/<module-id>/<book-slug>"
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/pdf_extract.py" "<pdf>" --out "<vault>/.solo-rpg/staging/<module-id>/<book-slug>"
 ```
 
 Useful options: `--pages 1-60` (trial run on a big book), `--columns 2` (force two columns
@@ -61,7 +58,7 @@ images.
 
 Use `outline.json` (bookmarks) if present, otherwise `headings.md`. Skim `text.md` by chapter.
 Don't read everything in depth; this is triage. Write
-`<staging>/<module-id>/SURVEY.md`:
+`<vault>/.solo-rpg/staging/<module-id>/SURVEY.md`:
 
 ```markdown
 # Survey: <title>  (module: <id>, kind: <kind>)

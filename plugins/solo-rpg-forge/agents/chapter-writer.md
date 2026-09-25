@@ -20,7 +20,7 @@ table ids planned for this chapter. All paths are absolute. Write only inside th
 2. Read the chapter from `<staging>/pages/pNNNN.txt`, one page at a time, in order.
    Check page images in `<staging>/images/` when the text looks jumbled: interleaved
    columns, sidebars cut into paragraphs, or table fragments.
-3. Write the target file(s) in the spec's format:
+3. Write the target file(s) under `<module dir>/reference/rules/`, in the spec's format:
    - `[p.N]` (printed page) opening every paragraph or bullet.
    - Keep every number, condition, modifier, exception and ordering. Quote the book
      verbatim for defined terms, triggers and short mechanical text.
@@ -34,7 +34,7 @@ table ids planned for this chapter. All paths are absolute. Write only inside th
 
 ## Return (as your final message)
 ```
-FILES: rules/NN-slug.md, ...
+FILES: reference/rules/NN-slug.md, ...
 INDEX:
 | NN-slug.md | topics | printed pages | keywords incl. synonyms |
 GLOSSARY:
