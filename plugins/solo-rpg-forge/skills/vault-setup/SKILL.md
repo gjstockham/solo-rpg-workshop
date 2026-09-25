@@ -99,7 +99,8 @@ only if the player uses Templater.
 
 ## 4. Hand-off
 
-List what was created and which community Obsidian plugins to install. Remind the player to
-run `/reload-plugins` (or restart Claude Code) so the new project skills and the rules-lawyer
-agent load. Suggest
+List what was created and which community Obsidian plugins to install. Tell the player to
+**restart Claude Code**: `.claude/agents/` is only read at launch, so the new rules-lawyer
+agent won't load until they do. (Skills under `.claude/skills/` are watched and need no
+restart, unless that directory was created during this session.) Suggest
 `/solo-rpg-forge:session-kit` next.

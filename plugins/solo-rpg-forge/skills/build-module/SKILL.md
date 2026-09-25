@@ -101,8 +101,11 @@ Tell the player:
 - **Proof-reading**: `reference/VERIFY.md` lists every table with its page. Once they've
   checked a table against the book, `rpg-table mark-verified <id>` records it. Unverified
   tables still work, and `rpg-table list` shows which are verified.
-- **Loading the new skills**: they're project skills in this vault, so nothing needs
-  installing. Run `/reload-plugins`, or restart Claude Code, to pick them up in this session.
+- **Loading the new skills**: they're project skills in this vault, so there is nothing to
+  install. Claude Code watches `.claude/skills/` and picks them up in this session. The one
+  exception is the **first** module in a vault: if `.claude/skills/` didn't exist when the
+  session started, say so and tell them to restart Claude Code, because that directory only
+  starts being watched at launch.
 - **Next step**: `/solo-rpg-forge:vault-setup` in this vault (or another
   `/solo-rpg-forge:ingest` if there's a second book, such as a solo engine).
 

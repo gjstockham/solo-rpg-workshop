@@ -74,8 +74,10 @@ TheOneRing/
   Sessions/  Characters/  Campaign.md  House Rules.md  Dashboards/
 ```
 
-Modules are project skills, so `/reload-plugins` (or restarting Claude Code) picks up newly
-built ones. There is no `/plugin install` step for a module, and no marketplace to maintain.
+Modules are project skills, so there is no `/plugin install` step for a module and no
+marketplace to maintain. Claude Code watches `.claude/skills/` and picks up new modules
+during a session. Restart it only after the **first** module in a vault (the directory has to
+exist at launch to be watched) and after `vault-setup` writes `.claude/agents/rules-lawyer.md`.
 
 ### Notes
 

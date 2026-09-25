@@ -80,6 +80,11 @@ logs. Include the module procedure skills and the core ones (`/solo-rpg-core:rul
 
 With the player's permission, walk through `session-start` using clearly marked test rolls
 (`--seed 1`, which the scripts tag `[SEEDED TEST ROLL]`) into a scratch note
-`Sessions/_kit-test.md`. Check that every referenced table and procedure resolves. Then
-delete that scratch note, since it was test output Claude created in this run. Report any
-fixes you made.
+`Sessions/_kit-test.md`. Follow the steps from the files you just wrote rather than invoking
+`/session-start`, so the dry run doesn't depend on the new skill having been picked up yet.
+Check that every referenced table and procedure resolves. Then delete that scratch note,
+since it was test output Claude created in this run. Report any fixes you made.
+
+Finish by telling the player the new commands, and that they load automatically — Claude Code
+watches `.claude/skills/`. A restart is only needed if that directory was created during this
+session.

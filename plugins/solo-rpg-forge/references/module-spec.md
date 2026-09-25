@@ -4,8 +4,11 @@ A **module** is one ruleset — a game, a solo engine, a supplement, or a settin
 as a **project skill inside the player's own vault**. Modules contain data and instructions
 only. All dice and table code lives in `solo-rpg-core`.
 
-Because a module is a project skill, there is nothing to install, enable or reload: it loads
-because the vault is the project. Paths below are relative to the vault root, which
+Because a module is a project skill, there is nothing to install or enable: it loads because
+the vault is the project, and Claude Code watches `.claude/skills/` during a session. Only
+two things need a restart — the first module built in a vault, because `.claude/skills/` has
+to exist at launch to be watched, and any change under `.claude/agents/`.
+Paths below are relative to the vault root, which
 `module_tool.py where` prints. The forge never writes inside its own plugin folder (once
 installed, that's Claude Code's plugin cache and is replaced on every update).
 
