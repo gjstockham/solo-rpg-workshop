@@ -1,8 +1,10 @@
 # Design: solo-rpg-gm — Claude runs a published adventure
 
-Status: **draft for review**. M1 (core changes, section 12) and M2 (building adventures,
-section 6) are built; M2 is still to be tried on a real adventure. The rest isn't built.
-The full adventure format is `plugins/solo-rpg-gm/references/adventure-spec.md`.
+Status: **draft for review**. M1 (core changes, section 12), M2 (building adventures,
+section 6) and M3 (the GM vault, section 7) are built; M2 is still to be tried on a real
+adventure. Play (M4) isn't built. The full adventure format is
+`plugins/solo-rpg-gm/references/adventure-spec.md`, and the contract as written into vaults
+is `plugins/solo-rpg-gm/references/gm-contract.md`.
 
 A third plugin in this marketplace, `solo-rpg-gm`, lets Claude act as **game master for a
 published adventure module**. The player runs the party. Claude reads the adventure,
@@ -354,7 +356,7 @@ way `vault-setup` does.
     skills/<rules-module>/ …              rules module (from the forge)
     skills/gm-oracle/                     small oracle module (section 10)
     agents/rules-lawyer.md                campaign copy, as today
-    agents/keeper.md                      campaign copy, with the player's model choice
+    agents/keeper.md                      campaign copy, with the player's model choice (M4)
     settings.json
   .solo-rpg/
     adventures/<adv-id>/                  adventure modules (hidden)
@@ -379,9 +381,24 @@ session_log: terse            # v1 has only terse; other styles later
 current_session: Sessions/Session 01.md
 ```
 
-`settings.json` also allows `rpg-gm` and denies Claude edits to `sealed.jsonl` and to
-`.solo-rpg/gm/**/state-log.jsonl`. `state.yaml` is changed through `rpg-gm`, so every
-change is logged.
+The deterministic part is `rpg-gm init --campaign <name> --rules <ids>`: it writes
+`solo-rpg.yaml` (registering every built adventure as `planned`), creates `.solo-rpg/gm/`,
+installs `gm-oracle`, and merges `settings.json`. Re-running it with no arguments registers
+newly built adventures. It refuses a vault that already holds a clerk-style campaign.
+`rpg-gm status` shows the config, rules modules and adventures.
+
+`settings.json` allows `rpg-roll`, `rpg-table`, `rpg-gm` and `rpg-sealed verify` (not
+`show`, which reveals), and denies Claude edits to `.obsidian/`, `audit.jsonl`,
+`sealed.jsonl` and `.solo-rpg/gm/**/state-log.jsonl`. `state.yaml` is changed through
+`rpg-gm`, so every change is logged.
+
+`Known/` entries carry `type: known`, `kind` (place, person, creature, clue, item, rumour),
+`adventure`, `status` (current, outdated) and `learned` (session). The campaign's
+`rules-lawyer` copy names the rules modules and `gm-oracle`, and is told never to read
+`.solo-rpg/`.
+
+solo-rpg-core's `roll`, `table` and `record` skills defer to the GM contract when
+`style: gm`, since their clerk wording ("what it means is up to the player") doesn't apply.
 
 Several adventures per campaign: characters, `Known/` and sessions carry across. Each
 adventure has its own module and its own `gm/<adv-id>/` state. `/solo-rpg-gm:adventure`
@@ -506,9 +523,10 @@ Every question the adventure doesn't answer is resolved by this ladder, in order
 Claude never pre-decides the answer to a step-4 question and then rolls for show. The
 likelihood is chosen, and stated in the canon entry, before the roll.
 
-**The oracle.** `gm-vault-setup` writes a tiny module `gm-oracle` into the vault: one
-original yes/no table by likelihood (with "yes, and" / "no, but" results) and one original
-table for an NPC's attitude. Both are ours, not copied from any published solo engine.
+**The oracle.** `rpg-gm init` installs a tiny module `gm-oracle` into the vault: one
+original yes/no table on 1d20 with a column per likelihood (chance of any yes:
+very-unlikely 20%, unlikely 40%, even 50%, likely 60%, very-likely 80%) and "and" / "but"
+results, and one original 1d10 table for a starting attitude. Both are ours, not copied from any published solo engine.
 The player can swap in a solo-engine module of their own later.
 
 ## 11. Party and balance
@@ -560,7 +578,7 @@ Small, and compatible with the clerk style:
 | M0 | This design | Reviewed and agreed |
 | M1 ✅ | Core changes (section 12.1–12.3) | Secret rolls, sealed log, hash check and hidden adventure tables all work from the CLI |
 | M2 ✅ | Adventure spec, `rpg-gm check`, `ingest-adventure`, `build-adventure`, `element-writer`, `adventure-auditor` | A small published adventure builds, checks clean and audits, with only spoiler-free output shown |
-| M3 | `gm-vault-setup`, GM contract, `gm-oracle` module | A fresh vault with a forge-built rules module is set up for GM play |
+| M3 ✅ | `gm-vault-setup`, GM contract, `gm-oracle` module | A fresh vault with a forge-built rules module is set up for GM play |
 | M4 | `keeper`, `rpg-gm` state commands, play skills | A full session can be played, ended and resumed |
 | M5 | Playtest end to end | Notes on what broke, fed back into the spec |
 | Later | `scaled` and `dm-yourself` modes, GM personality, other log styles, better map handling | — |

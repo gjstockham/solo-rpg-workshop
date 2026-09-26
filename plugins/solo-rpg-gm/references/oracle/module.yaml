@@ -1,0 +1,19 @@
+# Built-in GM oracle, installed into GM-style vaults by `rpg-gm init`.
+# Original tables written for solo-rpg-gm; not taken from any published solo engine.
+id: gm-oracle
+title: "GM oracle"
+kind: solo-engine
+version: 0.1.0
+sources:
+  - title: "solo-rpg-gm built-in oracle (original)"
+    edition: ""
+    file: ""
+    page_offset: 0
+requires: []
+dice:
+  used: [1d20, 1d10]
+  conventions: "Roll high for yes. See reference/rules/01-oracle.md [p.1]."
+records: []
+trackers: []
+lists: []
+procedures: []

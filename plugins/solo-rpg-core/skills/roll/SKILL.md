@@ -36,8 +36,10 @@ determine it, with a citation. Examples: "PASS, margin +2 → Effect 2 [p.N]", o
 "a 1 is always a failure [p.N]". Stop there. What the result means in the fiction is up to
 the player.
 
-`--secret` exists only for GM-style campaigns (the vault CLAUDE.md says which style applies).
-In a clerk-style campaign the player is the GM, so never use it.
+`--secret` exists only for GM-style campaigns (`style: gm` in `solo-rpg.yaml`). In a
+clerk-style campaign the player is the GM, so never use it. In a GM-style campaign Claude is
+the GM, and the GM contract in the vault CLAUDE.md, not "stop there" above, governs what
+follows a result.
 
 If the script errors, show the error and fix the expression. Do not guess a result.
 If the player rolled physical dice, record their number with a `(player roll)` note instead.

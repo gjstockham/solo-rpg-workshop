@@ -5,6 +5,9 @@
   rpg-gm scaffold [ADV_ID] --title T --requires RULES_ID [...] [--types locations npcs ...]
   rpg-gm extract PDF ADV_ID [--pages 1-40] [--columns 2] [--render all]
   rpg-gm check ADV_ID                           lint an adventure module; validates its tables
+  rpg-gm init [--campaign NAME] [--rules RULES_ID ...] [--dry-run]
+        set the vault up for GM play: solo-rpg.yaml, .claude/settings.json, the gm-oracle module
+  rpg-gm status                                 campaign config, rules modules, adventures
 
 An adventure module lives at <vault>/.solo-rpg/adventures/ADV_ID/ and is defined by
 references/adventure-spec.md in this plugin. `extract` runs solo-rpg-forge's PDF
@@ -16,8 +19,10 @@ the player: tool calls are visible in Claude Code even when collapsed.
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from collections import deque
@@ -557,6 +562,128 @@ def cmd_check(a) -> int:
     return Checker(a.id).run()
 
 
+# ---------------------------------------------------------------- init / status
+
+CONFIG_HEADER = ("# solo-rpg campaign config (GM style) — read by rpg-roll, rpg-table, rpg-gm and the\n"
+                 "# solo-rpg-gm play skills. Adventure titles here are fine: the player chose them.\n")
+DEFAULT_PATHS = {
+    "sessions": "Sessions",
+    "templates": "Templates",
+    "characters": "Characters",
+    "known": "Known",
+    "handouts": "Handouts",
+    "campaign_note": "Campaign.md",
+    "house_rules": "House Rules.md",
+    "dashboards": "Dashboards",
+}
+ALLOW = ["Bash(rpg-roll *)", "Bash(rpg-table *)", "Bash(rpg-gm *)", "Bash(rpg-sealed verify)"]
+# Tamper-evident logs: Claude appends through the scripts but never edits them.
+# Obsidian's own config is the player's.
+DENY = ["Edit(./.obsidian/**)", "Edit(./.solo-rpg/audit.jsonl)", "Edit(./.solo-rpg/sealed.jsonl)",
+        "Edit(./.solo-rpg/gm/**/state-log.jsonl)"]
+
+
+def read_config() -> dict:
+    p = ROOT / gp.CAMPAIGN_FILE
+    return (load_yaml(p) or {}) if p.exists() else {}
+
+
+def built_adventures() -> Dict[str, Path]:
+    return {p.parent.name: p.parent for p in sorted(gp.adventures_dir(ROOT).glob(f"*/{gp.ADVENTURE_FILE}"))}
+
+
+def merge_settings(path: Path, dry: bool) -> None:
+    s = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    perms = s.setdefault("permissions", {})
+    for key, rules in (("allow", ALLOW), ("deny", DENY)):
+        lst = perms.setdefault(key, [])
+        lst += [r for r in rules if r not in lst]
+    txt = json.dumps(s, indent=2) + "\n"
+    if dry:
+        print(f"--- {path}\n{txt}")
+    else:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(txt, encoding="utf-8")
+        print(f"wrote {path.relative_to(ROOT)}")
+
+
+def cmd_init(a) -> int:
+    cfg = read_config()
+    if cfg and cfg.get("style", "clerk") != "gm":
+        sys.exit("This vault is already a clerk-style campaign (solo-rpg.yaml has no `style: gm`).\n"
+                 "GM play needs its own vault: one campaign, one style.")
+    campaign = a.campaign or cfg.get("campaign")
+    if not campaign:
+        sys.exit("give --campaign NAME")
+    rules = a.rules or [m for m in cfg.get("modules") or [] if m != gp.ORACLE_ID]
+    if not rules:
+        sys.exit("give --rules RULES_ID (the forge-built rules module(s) this campaign uses)")
+    present = gp.rules_modules(ROOT)
+    missing = [r for r in rules if r not in present]
+    if missing:
+        sys.exit(f"rules module(s) not in this vault: {missing}. In this vault: {list(present) or 'none'}")
+    for r in rules:
+        m = load_yaml(present[r] / "module.yaml") or {}
+        for req in m.get("requires") or []:
+            if req not in rules:
+                sys.exit(f"rules module {r} requires {req}; add it to --rules")
+
+    advs = list(cfg.get("adventures") or [])
+    known = {str((x or {}).get("id")) for x in advs}
+    advs += [{"id": aid, "status": "planned"} for aid in built_adventures() if aid not in known]
+    cfg.update({"campaign": campaign, "style": "gm", "modules": [*rules, gp.ORACLE_ID], "adventures": advs})
+    for k, v in (("active_adventure", None), ("party_mode", "as-written"), ("session_log", "terse"),
+                 ("current_session", None)):
+        cfg.setdefault(k, v)
+    paths = cfg.setdefault("paths", {})
+    for k, v in DEFAULT_PATHS.items():
+        paths.setdefault(k, v)
+    txt = CONFIG_HEADER + yaml.safe_dump(cfg, sort_keys=False, allow_unicode=True)
+
+    oracle_src = gp.GM_ROOT / "references" / "oracle"
+    oracle_dst = ROOT / gp.SKILLS / gp.ORACLE_ID
+    if a.dry_run:
+        print(f"--- {gp.CAMPAIGN_FILE}\n{txt}")
+        print(f"--- {oracle_dst.relative_to(ROOT)}: "
+              f"{'already present, kept' if oracle_dst.exists() else 'would install the gm-oracle module'}")
+    else:
+        (ROOT / gp.CAMPAIGN_FILE).write_text(txt, encoding="utf-8")
+        print(f"wrote {gp.CAMPAIGN_FILE}")
+        (ROOT / gp.WORK / "gm").mkdir(parents=True, exist_ok=True)
+        print(f"ensured {gp.WORK}/ and {gp.WORK}/gm/")
+        if oracle_dst.exists():
+            print(f"kept {oracle_dst.relative_to(ROOT)} (already present)")
+        else:
+            shutil.copytree(oracle_src, oracle_dst)
+            print(f"installed {oracle_dst.relative_to(ROOT)}")
+    merge_settings(ROOT / ".claude" / "settings.json", a.dry_run)
+    return 0
+
+
+def cmd_status(a) -> int:
+    cfg = read_config()
+    print(f"vault: {ROOT}")
+    if not cfg:
+        print("no solo-rpg.yaml (run /solo-rpg-gm:gm-vault-setup)")
+    else:
+        print(f"campaign: {cfg.get('campaign')}   style: {cfg.get('style', 'clerk')}")
+        print(f"modules: {', '.join(cfg.get('modules') or []) or 'none'}")
+        print(f"active adventure: {cfg.get('active_adventure') or 'none'}")
+        print(f"party mode: {cfg.get('party_mode')}   session log: {cfg.get('session_log')}")
+        print(f"current session: {cfg.get('current_session') or 'none'}")
+    built = built_adventures()
+    listed = {str((x or {}).get("id")): (x or {}).get("status") for x in cfg.get("adventures") or []}
+    print("adventures:")
+    for aid in sorted(set(built) | set(listed)):
+        state = listed.get(aid, "not registered (re-run rpg-gm init)")
+        print(f"  {aid}: {state}{'' if aid in built else '  (NOT BUILT)'}")
+    if not built and not listed:
+        print("  none")
+    print(f"rules modules present: {', '.join(gp.rules_modules(ROOT)) or 'none'}")
+    print(f"oracle: {'installed' if (ROOT / gp.SKILLS / gp.ORACLE_ID / 'module.yaml').exists() else 'missing'}")
+    return 0
+
+
 # ---------------------------------------------------------------- main
 
 def main(argv=None) -> int:
@@ -576,6 +703,11 @@ def main(argv=None) -> int:
     p.add_argument("id")
     p = sub.add_parser("check")
     p.add_argument("id")
+    p = sub.add_parser("init", help="set the vault up for GM play")
+    p.add_argument("--campaign")
+    p.add_argument("--rules", nargs="+", help="rules module id(s)")
+    p.add_argument("--dry-run", action="store_true")
+    sub.add_parser("status")
     a, extra = ap.parse_known_args(argv)
     if extra and a.cmd != "extract":
         ap.error(f"unrecognized arguments: {' '.join(extra)}")
@@ -585,7 +717,8 @@ def main(argv=None) -> int:
     gp.check_vault(ROOT)
     if a.cmd == "extract":
         return cmd_extract(a, extra)
-    return {"where": cmd_where, "scaffold": cmd_scaffold, "check": cmd_check}[a.cmd](a)
+    return {"where": cmd_where, "scaffold": cmd_scaffold, "check": cmd_check,
+            "init": cmd_init, "status": cmd_status}[a.cmd](a)
 
 
 if __name__ == "__main__":

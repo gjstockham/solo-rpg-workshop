@@ -108,7 +108,9 @@ Tell the player, spoiler-free:
 - rules topics the rules module still doesn't cover, and whether that matters before
   play (extend the rules module with the forge if so);
 - that `AUDIT.md` and everything else stay hidden until they choose to look after play;
-- the next step: set the vault up for GM play with `/solo-rpg-gm:gm-vault-setup`.
+- the next step: if the vault isn't set up for GM play yet (`rpg-gm status`), that's
+  `/solo-rpg-gm:gm-vault-setup`. If it is, run `rpg-gm init` now to register the new
+  adventure as `planned`.
 
 ## Quality bar (check before hand-off)
 - Every element in the survey exists, and `rpg-gm check` reports OK.

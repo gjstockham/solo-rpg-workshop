@@ -1,0 +1,25 @@
+id: attitude
+title: 'GM oracle: attitude'
+dice: 1d10
+source:
+  book: gm-oracle (original, solo-rpg-gm)
+  page: 1
+notes: Only when neither the adventure nor the rules module says how a character or creature regards the
+  party. Rules-module reaction or morale rules come first.
+rows:
+- roll: 1
+  result: 'Hostile: acts against the party at the first real chance'
+- range:
+  - 2
+  - 3
+  result: 'Unfriendly: unhelpful and suspicious; wants them gone'
+- range:
+  - 4
+  - 7
+  result: 'Wary: neutral, guarded, acts in its own interest'
+- range:
+  - 8
+  - 9
+  result: 'Friendly: willing to help if it costs little'
+- roll: 10
+  result: 'Helpful: goes out of its way for the party'

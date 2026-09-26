@@ -43,8 +43,10 @@ Quote the result line(s) as printed. Do not add description, colour or interpret
 If the player wants help turning a result into fiction, that is `/solo-rpg-core:interpret`,
 used only on request.
 
-`--gm` and `--secret` exist only for GM-style campaigns (the vault CLAUDE.md says which style
-applies). In a clerk-style campaign never use them.
+`--gm` and `--secret` exist only for GM-style campaigns (`style: gm` in `solo-rpg.yaml`). In a
+clerk-style campaign never use them. In a GM-style campaign Claude is the GM: it chooses
+tables and columns as the adventure and rules direct, and the GM contract in the vault
+CLAUDE.md governs how results are used.
 
 If a table is missing or errors, say so. Offer `rpg-table lookup` with a physical roll, or
 note the gap for the module's README. Do not improvise a substitute table.

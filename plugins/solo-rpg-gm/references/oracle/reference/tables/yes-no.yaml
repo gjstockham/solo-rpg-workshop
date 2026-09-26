@@ -1,0 +1,126 @@
+id: yes-no
+title: 'GM oracle: yes or no'
+dice: 1d20
+source:
+  book: gm-oracle (original, solo-rpg-gm)
+  page: 1
+columns:
+- very-unlikely
+- unlikely
+- even
+- likely
+- very-likely
+notes: 'Pick the column from what''s established before rolling (see rules/01-oracle.md). Chance of any
+  Yes: very-unlikely 20%, unlikely 40%, even 50%, likely 60%, very-likely 80%. Roll with --column and
+  --secret.'
+rows:
+- roll: 1
+  results:
+    very-unlikely: No, and…
+    unlikely: No, and…
+    even: No, and…
+    likely: No, and…
+    very-likely: No, and…
+- roll: 2
+  results:
+    very-unlikely: No, and…
+    unlikely: No, and…
+    even: No, and…
+    likely: No, and…
+    very-likely: 'No'
+- roll: 3
+  results:
+    very-unlikely: No, and…
+    unlikely: No, and…
+    even: 'No'
+    likely: 'No'
+    very-likely: No, but…
+- roll: 4
+  results:
+    very-unlikely: No, and…
+    unlikely: 'No'
+    even: 'No'
+    likely: 'No'
+    very-likely: No, but…
+- range:
+  - 5
+  - 6
+  results:
+    very-unlikely: 'No'
+    unlikely: 'No'
+    even: 'No'
+    likely: 'No'
+    very-likely: Yes, but…
+- range:
+  - 7
+  - 8
+  results:
+    very-unlikely: 'No'
+    unlikely: 'No'
+    even: 'No'
+    likely: No, but…
+    very-likely: 'Yes'
+- range:
+  - 9
+  - 10
+  results:
+    very-unlikely: 'No'
+    unlikely: 'No'
+    even: No, but…
+    likely: Yes, but…
+    very-likely: 'Yes'
+- range:
+  - 11
+  - 12
+  results:
+    very-unlikely: 'No'
+    unlikely: No, but…
+    even: Yes, but…
+    likely: 'Yes'
+    very-likely: 'Yes'
+- range:
+  - 13
+  - 14
+  results:
+    very-unlikely: 'No'
+    unlikely: Yes, but…
+    even: 'Yes'
+    likely: 'Yes'
+    very-likely: 'Yes'
+- range:
+  - 15
+  - 16
+  results:
+    very-unlikely: No, but…
+    unlikely: 'Yes'
+    even: 'Yes'
+    likely: 'Yes'
+    very-likely: 'Yes'
+- roll: 17
+  results:
+    very-unlikely: Yes, but…
+    unlikely: 'Yes'
+    even: 'Yes'
+    likely: 'Yes'
+    very-likely: Yes, and…
+- roll: 18
+  results:
+    very-unlikely: Yes, but…
+    unlikely: 'Yes'
+    even: 'Yes'
+    likely: Yes, and…
+    very-likely: Yes, and…
+- roll: 19
+  results:
+    very-unlikely: 'Yes'
+    unlikely: Yes, and…
+    even: Yes, and…
+    likely: Yes, and…
+    very-likely: Yes, and…
+- roll: 20
+  results:
+    very-unlikely: Yes, and…
+    unlikely: Yes, and…
+    even: Yes, and…
+    likely: Yes, and…
+    very-likely: Yes, and…

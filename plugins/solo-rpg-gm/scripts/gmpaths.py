@@ -23,6 +23,7 @@ CAMPAIGN_FILE = "solo-rpg.yaml"
 WORK = ".solo-rpg"
 SKILLS = Path(".claude") / "skills"
 ADVENTURE_FILE = "adventure.yaml"
+ORACLE_ID = "gm-oracle"  # the built-in oracle module rpg-gm init installs; not a rules module
 
 
 def _candidates(start: Path):
@@ -74,9 +75,11 @@ def staging_dir(root: Path, aid: Optional[str] = None) -> Path:
 
 
 def rules_modules(root: Path) -> dict:
-    """Map folder name -> dir for every rules module (skill with module.yaml)."""
+    """Map folder name -> dir for every rules module (skill with module.yaml), except the oracle."""
     s = root / SKILLS
-    return {p.parent.name: p.parent for p in sorted(s.glob("*/module.yaml"))} if s.exists() else {}
+    if not s.exists():
+        return {}
+    return {p.parent.name: p.parent for p in sorted(s.glob("*/module.yaml")) if p.parent.name != ORACLE_ID}
 
 
 def _sibling(name: str, marker: str, env: str) -> Optional[Path]:

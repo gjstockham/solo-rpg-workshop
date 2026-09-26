@@ -33,5 +33,9 @@ templates folder so frontmatter stays consistent.
    Create stubs only when the player agrees or the procedure says the list gains an entry.
 6. **House rules and rulings** go in the campaign's house-rules note with the date and the
    question they settle, so the rules lawyer can apply them later.
-7. **Never delete** notes or log lines. Mark items as resolved, removed or dead via
+7. **GM-style campaigns** (`style: gm` in `solo-rpg.yaml`): Claude is the GM, so what it
+   told the characters in play counts as "what happened" alongside the player's words, and
+   the GM contract in the vault CLAUDE.md governs. Player-visible notes still hold only
+   what the party knows. Hidden material stays under `.solo-rpg/`.
+8. **Never delete** notes or log lines. Mark items as resolved, removed or dead via
    frontmatter status instead, unless the player explicitly asks for a deletion.
