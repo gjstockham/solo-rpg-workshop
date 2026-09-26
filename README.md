@@ -10,7 +10,7 @@ or the other.
 |---|---|
 | `solo-rpg-core` | `rpg-roll` and `rpg-table` (on PATH while enabled), skills `roll`, `table`, `record`, `rules`, `interpret`, the `rules-lawyer` agent, and the play contract |
 | `solo-rpg-forge` | The builder: `ingest` → `build-module` turn a rulebook PDF into a ruleset **module**; `vault-setup` and `session-kit` build the campaign around it |
-| `solo-rpg-gm` | **In development**, a separate play style where Claude *is* the GM for a published adventure. So far: `ingest-adventure` → `build-adventure` turn an adventure PDF into a hidden adventure module, and `gm-vault-setup` sets a vault up for GM play (contract, oracle, player-facing notes). Play commands come next. Design: [`docs/gm-design.md`](docs/gm-design.md) |
+| `solo-rpg-gm` | **In development**, a separate play style where Claude *is* the GM for a published adventure. So far: `ingest-adventure` → `build-adventure` turn an adventure PDF into a hidden adventure module, `gm-vault-setup` sets a vault up for GM play (contract, oracle, player-facing notes), and `start` … `end` run sessions. Not yet playtested on a real adventure. Design: [`docs/gm-design.md`](docs/gm-design.md) |
 
 You install these two plugins once. Everything the forge then builds — modules, agents,
 session commands, templates — is written **into your own vault as project skills**, so there

@@ -1,8 +1,8 @@
 # Design: solo-rpg-gm — Claude runs a published adventure
 
 Status: **draft for review**. M1 (core changes, section 12), M2 (building adventures,
-section 6) and M3 (the GM vault, section 7) are built; M2 is still to be tried on a real
-adventure. Play (M4) isn't built. The full adventure format is
+section 6), M3 (the GM vault, section 7) and M4 (play, sections 8-9) are built, and
+waiting for a first playtest on a real adventure (M5). The full adventure format is
 `plugins/solo-rpg-gm/references/adventure-spec.md`, and the contract as written into vaults
 is `plugins/solo-rpg-gm/references/gm-contract.md`.
 
@@ -183,8 +183,14 @@ BRIEF       the hidden elements relevant to this place or action: what a search 
             find, who is here, what's lurking, triggers, the rules and rolls involved,
             stat block ids to put in play
 STATE       state changes this implies (for Claude to apply with rpg-gm)
+SILENT      what the adventure doesn't cover that the GM will probably need
 CITES       [p.N] for each item
 ```
+
+The GM asks with one of `arrive <loc-id>`, `resume`, `action: <what they do>`,
+`talk <npc-id>` or `lookup <…>`. The keeper reconciles the book with state (bodies, not
+encounters, for creatures that are down; no repeated read-aloud on a return visit), never
+narrates, and never changes state itself.
 
 Claude keeps the brief in context for the rest of the scene rather than re-asking. When
 it's quicker to open an adventure file directly (a stat block mid-fight, a single line
@@ -423,20 +429,26 @@ taken:  [loc-03/treasure-1]
 `canon.md` records every improvised fact (section 10), with session and scene, so
 improvisation stays consistent across sessions.
 
-`rpg-gm` (in the new plugin). Built in M2: `where`, `scaffold`, `extract` and `check`
-(section 6). The state commands below come in M4:
+`rpg-gm` (in the new plugin). Besides the build and setup commands (`where`, `scaffold`,
+`extract`, `check`, `init`, `status`), play uses these. `--adv` defaults to the active
+adventure; every change is appended to `state-log.jsonl` with its `--why`.
 
 | Command | Does |
 |---|---|
+| `rpg-gm adventure list\|start\|finish\|abandon [id]` | `start` creates the state (current = the start element, clocks at 0) and `canon.md`, and pauses any other active adventure; `finish`/`abandon` stamp the date |
+| `rpg-gm set-session <path>` | Record the current session note |
 | `rpg-gm state show [path]` | Print state (for Claude; never shown to the player as such) |
-| `rpg-gm state set <path> <value> --why "<ref>"` | Change a value; logs old → new to `state-log.jsonl` |
-| `rpg-gm spawn <stat-id> [--count N] [--at loc-05]` | Create instances; hp from `fields.hp`, or rolled from `hp_roll` with `rpg-roll --secret` |
-| `rpg-gm damage <instance> <n>` / `tick <clock> [n]` | Common shortcuts, logged |
-| `rpg-gm canon "<fact>" --basis "<why>"` | Append to `canon.md` |
-| `rpg-gm check <adv-id>` | Validate an adventure module (section 6) |
-| `rpg-gm reveal [adv-id]` | Print the sealed log and verify it against the audit hashes (section 12) |
+| `rpg-gm state set <path> <value> --why "<ref>"` | Change a value (YAML; `null` removes it) |
+| `rpg-gm enter <loc-id>` | Move the party; reports whether it's a first visit (for read-aloud) |
+| `rpg-gm spawn <stat-id> [--count N\|dice] [--at loc-05]` | Create instances `stat-02#1…`; hp from `fields.hp`, or rolled from `hp_roll`; dice counts and hp are sealed rolls |
+| `rpg-gm damage <instance> <n>` | Subtract hp (negative heals, up to max); at 0 or below an active instance becomes `down` (the GM sets `dead`, `fled` and so on with `state set`) |
+| `rpg-gm tick <clock> [n]` | Advance a clock, capped at its max; when full, names the events with that `clock:` |
+| `rpg-gm canon "<fact>" --basis "<why>"` | Append to `canon.md`, tagged with the session |
+| `rpg-gm reveal [adv-id] [--force]` | After an adventure: sealed-log check, the sealed rolls between its start and finish, what was never reached or met, canon, the audit. Refuses an unfinished adventure without `--force` |
 
-Output uses neutral ids.
+Output uses neutral ids, except `reveal`, which is meant to spoil. The sealed rolls it shows
+are those between the adventure's start and finish times, so a paused adventure's window
+can include another's rolls.
 
 ## 9. Playing
 
@@ -454,7 +466,8 @@ Output uses neutral ids.
 | `/solo-rpg-gm:reveal` | After an adventure is finished: sealed rolls, what was missed, `AUDIT.md`. Asks for confirmation first |
 
 Character creation uses the rules module's own procedure runners, built by the forge, so
-it isn't duplicated here.
+it isn't duplicated here. The loop below is written into the `start` skill, so it stays in
+the conversation for the whole session.
 
 ### 9.2 The loop
 
@@ -579,7 +592,7 @@ Small, and compatible with the clerk style:
 | M1 ✅ | Core changes (section 12.1–12.3) | Secret rolls, sealed log, hash check and hidden adventure tables all work from the CLI |
 | M2 ✅ | Adventure spec, `rpg-gm check`, `ingest-adventure`, `build-adventure`, `element-writer`, `adventure-auditor` | A small published adventure builds, checks clean and audits, with only spoiler-free output shown |
 | M3 ✅ | `gm-vault-setup`, GM contract, `gm-oracle` module | A fresh vault with a forge-built rules module is set up for GM play |
-| M4 | `keeper`, `rpg-gm` state commands, play skills | A full session can be played, ended and resumed |
+| M4 ✅ | `keeper`, `rpg-gm` state commands, play skills | A full session can be played, ended and resumed |
 | M5 | Playtest end to end | Notes on what broke, fed back into the spec |
 | Later | `scaled` and `dm-yourself` modes, GM personality, other log styles, better map handling | — |
 

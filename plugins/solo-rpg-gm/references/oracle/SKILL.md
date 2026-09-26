@@ -15,5 +15,3 @@ then roll it secretly and follow the answer:
 rpg-table roll gm-oracle/yes-no --column <likely|even|...> --secret --label "gm check" --log "<session note>"
 rpg-gm canon "<the question, the likelihood, the answer and what you made of it>" --basis "oracle"
 ```
-
-(`rpg-gm canon` arrives with the play tools; until then, note the result in the session log.)

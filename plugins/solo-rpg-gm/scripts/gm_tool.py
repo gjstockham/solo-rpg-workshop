@@ -9,6 +9,17 @@
         set the vault up for GM play: solo-rpg.yaml, .claude/settings.json, the gm-oracle module
   rpg-gm status                                 campaign config, rules modules, adventures
 
+Play (hidden state under <vault>/.solo-rpg/gm/<adv-id>/; --adv defaults to the active one):
+  rpg-gm adventure list|start|finish|abandon [ADV_ID]
+  rpg-gm set-session "Sessions/Session 03.md"
+  rpg-gm state show [PATH] | state set PATH VALUE --why TEXT
+  rpg-gm enter LOC_ID                           the party moves; says whether it's a first visit
+  rpg-gm spawn STAT_ID [--count N|DICE] [--at LOC_ID]   hp and dice counts rolled secretly
+  rpg-gm damage INSTANCE N                      e.g. stat-02#1 5 (negative heals)
+  rpg-gm tick CLOCK_ID [N]
+  rpg-gm canon "FACT" --basis "WHY"
+  rpg-gm reveal [ADV_ID] [--force]              after an adventure: spoilers by design
+
 An adventure module lives at <vault>/.solo-rpg/adventures/ADV_ID/ and is defined by
 references/adventure-spec.md in this plugin. `extract` runs solo-rpg-forge's PDF
 extractor into <vault>/.solo-rpg/staging/ADV_ID/book/.
@@ -36,6 +47,7 @@ except ImportError:
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import gmpaths as gp  # noqa: E402
+import gm_play  # noqa: E402
 
 ROOT: Path = Path.cwd()
 
@@ -708,6 +720,7 @@ def main(argv=None) -> int:
     p.add_argument("--rules", nargs="+", help="rules module id(s)")
     p.add_argument("--dry-run", action="store_true")
     sub.add_parser("status")
+    play = gm_play.add_parsers(sub)
     a, extra = ap.parse_known_args(argv)
     if extra and a.cmd != "extract":
         ap.error(f"unrecognized arguments: {' '.join(extra)}")
@@ -717,6 +730,8 @@ def main(argv=None) -> int:
     gp.check_vault(ROOT)
     if a.cmd == "extract":
         return cmd_extract(a, extra)
+    if a.cmd in play:
+        return gm_play.run(a.cmd, a, ROOT, play)
     return {"where": cmd_where, "scaffold": cmd_scaffold, "check": cmd_check,
             "init": cmd_init, "status": cmd_status}[a.cmd](a)
 

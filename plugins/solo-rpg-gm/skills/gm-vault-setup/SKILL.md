@@ -37,6 +37,10 @@ an adventure module goes in any note or message.
   - Campaign name and which rules module(s) it uses (default: the ones present).
   - Dashboards: Dataview (default) or core Bases.
   - Folder style: flat by type (default), or nested under a campaign folder.
+  - The keeper's model: the keeper agent reads the adventure for the GM during play, often.
+    Default: the same model as the session (`inherit`). A smaller, cheaper model (such as
+    `sonnet` or `haiku`) costs less per session but may miss or muddle details. They can
+    change it later in `.claude/agents/keeper.md`.
 
 ## 2. Propose
 
@@ -92,8 +96,11 @@ uses Templater.
      session is recorded (`solo-rpg.yaml` → `current_session`) and where house rules live.
      A line saying that `.solo-rpg/` holds hidden GM material the player shouldn't browse.
    - The frontmatter conventions, concisely.
-   - "Play commands: `/solo-rpg-gm:*`. Character creation: the rules module's procedure
-     commands" (list the runner skills, `/<rules-id>-<procedure-id>`, that exist).
+   - A play commands table: `/solo-rpg-gm:start`, `end`, `status`, `recap`, `challenge`,
+     `adventure` and `reveal`, each with when to use it; `/solo-rpg-core:rules` for rules
+     questions; and the rules module's character-creation and other procedure commands
+     (`/<rules-id>-<procedure-id>`, whichever exist). Note that plain messages are the
+     party's actions, and "OOC:" marks an out-of-character question.
    If a CLAUDE.md already exists, merge into it under clear headings rather than
    overwriting.
 4. **`.claude/agents/rules-lawyer.md`**: a vault-specific copy of solo-rpg-core's
@@ -103,16 +110,20 @@ uses Templater.
    folders and the house-rules note, and add: "Never read `.solo-rpg/`; it holds the
    adventure, which the player hasn't seen." Skip this if the player already has their own
    `rules-lawyer` agent, and say so.
-5. Run `rpg-gm status` and show the result.
+5. **`.claude/agents/keeper.md`**: a copy of this plugin's `agents/keeper.md` with
+   `model:` set to the player's choice. Otherwise word for word. If one exists, change only
+   its `model:` line (and only if the player asked).
+6. Run `rpg-gm status` and show the result.
 
 ## 4. Hand-off
 
 List what was created and which community Obsidian plugins to install. Tell the player to
-**restart Claude Code**: `.claude/agents/` is only read at launch. (Skills under
+**restart Claude Code**: `.claude/agents/` (the rules lawyer and the keeper) is only read
+at launch. (Skills under
 `.claude/skills/`, including the new `gm-oracle`, are watched, unless that directory was
 created during this session.)
 
 Next steps: create the party with the rules module's character-creation command, guided by
 the adventure's party guidance (`rpg-gm status` shows which adventures are registered;
-the guidance is in each adventure's `adventure.yaml`, and it's safe to quote). Then start
-play with the GM play commands.
+the guidance is in each adventure's `adventure.yaml`, and it's safe to quote). Then
+`/solo-rpg-gm:start`.

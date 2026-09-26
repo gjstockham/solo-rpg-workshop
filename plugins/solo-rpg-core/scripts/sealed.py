@@ -52,22 +52,28 @@ def cmd_verify(root: Path) -> int:
     return 0
 
 
-def cmd_show(root: Path, last: int) -> int:
-    lines = _lines(root / common.AUDIT_DIR / common.SEALED_FILE)
+def format_record(rec: dict) -> list:
+    label = f" — {rec['label']}" if rec.get("label") else ""
+    if rec.get("type") == "table":
+        out = []
+        for e in rec.get("entries", []):
+            ind = "  " * e.get("depth", 0)
+            body = e.get("error") or f"{e.get('value')} → {e.get('result')}"
+            out.append(f"{rec['ts']}  {ind}📜 {e.get('title')} ({e.get('source')}): {body}{label}")
+        return out
+    return [f"{rec['ts']}  🎲 {rec.get('expression')} = {rec.get('total')}{label}"]
+
+
+def cmd_show(root: Path, last: int = 0, since: str = "", until: str = "") -> int:
+    """Print sealed results, optionally only those with since <= ts <= until (ISO strings)."""
+    recs = [json.loads(ln) for ln in _lines(root / common.AUDIT_DIR / common.SEALED_FILE)]
+    recs = [r for r in recs if (not since or r.get("ts", "") >= since) and (not until or r.get("ts", "") <= until)]
     if last:
-        lines = lines[-last:]
-    if not lines:
+        recs = recs[-last:]
+    if not recs:
         print("No sealed results.")
-    for ln in lines:
-        rec = json.loads(ln)
-        label = f" — {rec['label']}" if rec.get("label") else ""
-        if rec.get("type") == "table":
-            for e in rec.get("entries", []):
-                ind = "  " * e.get("depth", 0)
-                body = e.get("error") or f"{e.get('value')} → {e.get('result')}"
-                print(f"{rec['ts']}  {ind}📜 {e.get('title')} ({e.get('source')}): {body}{label}")
-        else:
-            print(f"{rec['ts']}  🎲 {rec.get('expression')} = {rec.get('total')}{label}")
+    for rec in recs:
+        print("\n".join(format_record(rec)))
     return 0
 
 
