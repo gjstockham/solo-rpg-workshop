@@ -113,6 +113,7 @@ plugins/solo-rpg-core/     bin/ scripts/ skills/ agents/ references/
 plugins/solo-rpg-forge/    scripts/ skills/ agents/ references/module-spec.md
 ```
 
-`references/module-spec.md` defines every file a module contains. To test local changes, add
+`references/module-spec.md` defines every file a module contains. `docs/gm-design.md` is the
+draft design for a planned `solo-rpg-gm` plugin, where Claude runs a published adventure. To test local changes, add
 this checkout as a marketplace (`/plugin marketplace add <path>`) and run the forge from a
 scratch vault elsewhere — the scripts refuse to build inside this repo.
