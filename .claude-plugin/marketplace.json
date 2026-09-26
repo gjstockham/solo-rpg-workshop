@@ -3,7 +3,7 @@
   "owner": {
     "name": "Geoff"
   },
-  "description": "Solo RPG record-keeping toolkit: the core dice/table engine and the forge that builds ruleset modules and campaign vaults in your own folders.",
+  "description": "Solo RPG toolkit: the core dice/table engine, the forge that builds ruleset modules and campaign vaults in your own folders, and (in development) a GM mode that runs published adventures.",
   "plugins": [
     {
       "name": "solo-rpg-core",
@@ -14,6 +14,11 @@
       "name": "solo-rpg-forge",
       "source": "./plugins/solo-rpg-forge",
       "description": "Builds ruleset modules from rulebook PDFs, sets up Obsidian campaign vaults, and generates session-play skills."
+    },
+    {
+      "name": "solo-rpg-gm",
+      "source": "./plugins/solo-rpg-gm",
+      "description": "In development: Claude runs a published adventure as GM. Builds hidden adventure modules from adventure PDFs, on top of a forge-built rules module."
     }
   ]
 }

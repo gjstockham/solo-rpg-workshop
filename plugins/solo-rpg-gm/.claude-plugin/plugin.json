@@ -1,0 +1,12 @@
+{
+  "name": "solo-rpg-gm",
+  "description": "Claude as game master for published adventures: builds hidden adventure modules from adventure PDFs and runs them with a forge-built rules module.",
+  "version": "0.1.0",
+  "dependencies": [
+    "solo-rpg-core",
+    "solo-rpg-forge"
+  ],
+  "author": {
+    "name": "Geoff"
+  }
+}

@@ -391,9 +391,14 @@ def cmd_validate(a) -> int:
         for f in a.files:
             p = Path(f)
             mod = p.resolve().parent
-            while mod.parent != mod and not (mod / "module.yaml").exists():
+            manifests = ("module.yaml", common.ADVENTURE_FILE)
+            while mod.parent != mod and not any((mod / m).exists() for m in manifests):
                 mod = mod.parent
-            mid = mod.name if (mod / "module.yaml").exists() else "local"
+            mid = "local"
+            for m in manifests:
+                if (mod / m).exists():
+                    mid = common._manifest_id(mod, m)
+                    break
             for t in load_file(p, mid):
                 tables[t.fqid] = t
         everything = {**load_all(), **tables}

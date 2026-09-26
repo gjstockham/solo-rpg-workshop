@@ -1,12 +1,16 @@
 # solo-rpg-workshop
 
-A Claude Code plugin marketplace for solo tabletop RPG play in Obsidian, where Claude acts
-strictly as **record-keeper, dice box, table reader and rules lawyer**. Claude is never the GM.
+A Claude Code plugin marketplace for solo tabletop RPG play in Obsidian. In the main play
+style (`solo-rpg-core` + `solo-rpg-forge`), Claude acts strictly as **record-keeper, dice
+box, table reader and rules lawyer**, and is never the GM. A second style, where Claude runs
+a published adventure as GM (`solo-rpg-gm`), is in development; a campaign uses one style
+or the other.
 
 | Plugin | What it is |
 |---|---|
 | `solo-rpg-core` | `rpg-roll` and `rpg-table` (on PATH while enabled), skills `roll`, `table`, `record`, `rules`, `interpret`, the `rules-lawyer` agent, and the play contract |
 | `solo-rpg-forge` | The builder: `ingest` → `build-module` turn a rulebook PDF into a ruleset **module**; `vault-setup` and `session-kit` build the campaign around it |
+| `solo-rpg-gm` | **In development**, a separate play style where Claude *is* the GM for a published adventure. So far: `ingest-adventure` → `build-adventure` turn an adventure PDF into a hidden adventure module. Design: [`docs/gm-design.md`](docs/gm-design.md) |
 
 You install these two plugins once. Everything the forge then builds — modules, agents,
 session commands, templates — is written **into your own vault as project skills**, so there
@@ -114,9 +118,12 @@ This repo ships only the tools and contains no book content.
 .claude-plugin/marketplace.json
 plugins/solo-rpg-core/     bin/ scripts/ skills/ agents/ references/
 plugins/solo-rpg-forge/    scripts/ skills/ agents/ references/module-spec.md
+plugins/solo-rpg-gm/       bin/ scripts/ skills/ agents/ references/adventure-spec.md
+docs/gm-design.md
 ```
 
 `references/module-spec.md` defines every file a module contains. `docs/gm-design.md` is the
-draft design for a planned `solo-rpg-gm` plugin, where Claude runs a published adventure. To test local changes, add
+draft design for `solo-rpg-gm`, where Claude runs a published adventure, and
+`plugins/solo-rpg-gm/references/adventure-spec.md` defines an adventure module. To test local changes, add
 this checkout as a marketplace (`/plugin marketplace add <path>`) and run the forge from a
 scratch vault elsewhere — the scripts refuse to build inside this repo.

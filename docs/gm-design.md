@@ -1,6 +1,8 @@
 # Design: solo-rpg-gm — Claude runs a published adventure
 
-Status: **draft for review**. M1 (core changes, section 12) is built; the rest isn't.
+Status: **draft for review**. M1 (core changes, section 12) and M2 (building adventures,
+section 6) are built; M2 is still to be tried on a real adventure. The rest isn't built.
+The full adventure format is `plugins/solo-rpg-gm/references/adventure-spec.md`.
 
 A third plugin in this marketplace, `solo-rpg-gm`, lets Claude act as **game master for a
 published adventure module**. The player runs the party. Claude reads the adventure,
@@ -73,8 +75,8 @@ Plugin layout:
 ```
 plugins/solo-rpg-gm/
   .claude-plugin/plugin.json
-  bin/rpg-gm                         state, checks and reveal (section 8)
-  scripts/gm_tool.py  adventure_tool.py
+  bin/rpg-gm                         build tools now; state and reveal from M4 (section 8)
+  scripts/gm_tool.py  gmpaths.py
   skills/
     ingest-adventure/                PDF → staging + survey (section 6)
     build-adventure/                 survey → adventure module (section 6)
@@ -201,6 +203,7 @@ can change it there at any time. The default is to inherit the session's model.
   overview.md              GM synopsis: background, what's going on, how it can end [p.N]
   INDEX.md                 every element: id → title → page → one line
   <element-type>/<id>.md   one file per element, for each type the survey found (5.3)
+  rules.md                 optional: rules the adventure itself adds
   tables/<group>/*.yaml    random tables, standard rpg-table format
   README.md  AUDIT.md      build log and audit (hidden)
 ```
@@ -303,7 +306,8 @@ via `BUILD-STATE.md`. Staging goes in `.solo-rpg/staging/<adv-id>/`.
 **`/solo-rpg-gm:ingest-adventure <pdf> [adv-id]`**
 1. **Preconditions.** The rules module the adventure is for already exists in the vault.
    If not, send the player to `/solo-rpg-forge:ingest` for the rulebook first.
-2. **Extract** with the forge's `pdf_extract.py`, exactly as `ingest` does.
+2. **Extract** with `rpg-gm extract`, which runs the forge's `pdf_extract.py` and renders
+   every page (boxed text, stat blocks and maps read best from images).
 3. **Page numbering**, as `ingest` does.
 4. **Survey** into `SURVEY.md`, which **the player doesn't read**. As well as the usual
    chapter table, it records: the adventure's structure (site-based, event-driven,
@@ -402,7 +406,8 @@ taken:  [loc-03/treasure-1]
 `canon.md` records every improvised fact (section 10), with session and scene, so
 improvisation stays consistent across sessions.
 
-`rpg-gm` (in the new plugin):
+`rpg-gm` (in the new plugin). Built in M2: `where`, `scaffold`, `extract` and `check`
+(section 6). The state commands below come in M4:
 
 | Command | Does |
 |---|---|
@@ -540,7 +545,8 @@ Small, and compatible with the clerk style:
    (`.solo-rpg/adventures/<id>/adventure.yaml`, tables in `<id>/tables/`) when
    `rpg-table` is given `--gm` (on any subcommand) or `SOLO_RPG_GM=1` is set. The
    campaign's `modules:` list doesn't filter adventures. Without `--gm`, adventure tables
-   can't be listed, shown or rolled.
+   can't be listed, shown or rolled. `rpg-table validate <file>` recognises a file inside
+   an adventure folder (added in M2, so the forge's table-transcriber works there).
 4. **Forge.** No behaviour change. The GM plugin calls its `pdf_extract.py` and dispatches
    its `table-transcriber` agent. `module_tool.py` doesn't gain an `adventure` kind;
    adventures have their own spec and tool.
@@ -553,7 +559,7 @@ Small, and compatible with the clerk style:
 |---|---|---|
 | M0 | This design | Reviewed and agreed |
 | M1 ✅ | Core changes (section 12.1–12.3) | Secret rolls, sealed log, hash check and hidden adventure tables all work from the CLI |
-| M2 | Adventure spec, `rpg-gm check`, `ingest-adventure`, `build-adventure`, `element-writer`, `adventure-auditor` | A small published adventure builds, checks clean and audits, with only spoiler-free output shown |
+| M2 ✅ | Adventure spec, `rpg-gm check`, `ingest-adventure`, `build-adventure`, `element-writer`, `adventure-auditor` | A small published adventure builds, checks clean and audits, with only spoiler-free output shown |
 | M3 | `gm-vault-setup`, GM contract, `gm-oracle` module | A fresh vault with a forge-built rules module is set up for GM play |
 | M4 | `keeper`, `rpg-gm` state commands, play skills | A full session can be played, ended and resumed |
 | M5 | Playtest end to end | Notes on what broke, fed back into the spec |
