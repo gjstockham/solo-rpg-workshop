@@ -1,6 +1,6 @@
 # Design: solo-rpg-gm — Claude runs a published adventure
 
-Status: **draft for review**. Nothing here is built yet.
+Status: **draft for review**. M1 (core changes, section 12) is built; the rest isn't.
 
 A third plugin in this marketplace, `solo-rpg-gm`, lets Claude act as **game master for a
 published adventure module**. The player runs the party. Claude reads the adventure,
@@ -524,18 +524,27 @@ the rules module has no levels, the mode is unavailable.
 
 Small, and compatible with the clerk style:
 
-1. **`rpg-roll --secret` and `rpg-table roll --secret`.** The full result is appended to
-   `.solo-rpg/sealed.jsonl` and printed to stdout (the GM needs it). `audit.jsonl` gets a
-   stub `{type, secret: true, label, sha256}` with the hash of the sealed record, so the
-   sealed log can be checked for tampering at `/solo-rpg-gm:reveal`. `--log` writes "GM
-   rolled (hidden) — <label>" to the session note.
-2. **Adventure tables.** `common.module_dirs()` also finds
-   `.solo-rpg/adventures/*/tables` when called with `--gm` (or `SOLO_RPG_GM=1`).
-   `rpg-table list` without `--gm` doesn't show adventure tables.
-3. **Forge.** No behaviour change. The GM plugin calls its `pdf_extract.py` and dispatches
+1. **`rpg-roll --secret` and `rpg-table roll|lookup --secret`.** The full result is
+   appended to `.solo-rpg/sealed.jsonl` and printed to stdout (the GM needs it), marked
+   `[SECRET]`. `audit.jsonl` gets a stub `{type, secret: true, label, sha256}` with the
+   hash of the sealed line. A table roll is sealed as one record, chained results
+   included, so no table title reaches the audit trail. `--log` writes "GM rolled
+   (hidden) — <label>" to the session note. Outside a campaign nothing is sealed and a
+   warning is printed.
+2. **`rpg-sealed`.** `verify` re-hashes every sealed line and matches it against the audit
+   stubs, printing counts only, so it's safe to run mid-adventure. It catches edited,
+   added and removed lines. `show [--last N]` prints the sealed results;
+   `/solo-rpg-gm:reveal` will wrap both. Vault settings deny Claude edits to
+   `sealed.jsonl`.
+3. **Adventure tables.** `common.module_dirs()` also finds adventure modules
+   (`.solo-rpg/adventures/<id>/adventure.yaml`, tables in `<id>/tables/`) when
+   `rpg-table` is given `--gm` (on any subcommand) or `SOLO_RPG_GM=1` is set. The
+   campaign's `modules:` list doesn't filter adventures. Without `--gm`, adventure tables
+   can't be listed, shown or rolled.
+4. **Forge.** No behaviour change. The GM plugin calls its `pdf_extract.py` and dispatches
    its `table-transcriber` agent. `module_tool.py` doesn't gain an `adventure` kind;
    adventures have their own spec and tool.
-4. **README.** The marketplace intro stops saying "Claude is never the GM" globally, and
+5. **README.** The marketplace intro stops saying "Claude is never the GM" globally, and
    instead describes the two styles and which plugins each uses.
 
 ## 13. Milestones
@@ -543,7 +552,7 @@ Small, and compatible with the clerk style:
 | # | Deliverable | Done when |
 |---|---|---|
 | M0 | This design | Reviewed and agreed |
-| M1 | Core changes (section 12.1–12.2) | Secret rolls, sealed log, hash check and hidden adventure tables all work from the CLI |
+| M1 ✅ | Core changes (section 12.1–12.3) | Secret rolls, sealed log, hash check and hidden adventure tables all work from the CLI |
 | M2 | Adventure spec, `rpg-gm check`, `ingest-adventure`, `build-adventure`, `element-writer`, `adventure-auditor` | A small published adventure builds, checks clean and audits, with only spoiler-free output shown |
 | M3 | `gm-vault-setup`, GM contract, `gm-oracle` module | A fresh vault with a forge-built rules module is set up for GM play |
 | M4 | `keeper`, `rpg-gm` state commands, play skills | A full session can be played, ended and resumed |

@@ -7,6 +7,11 @@ Examples:
   rpg-roll 1d100 --check "<=45" --label "skill test"
   rpg-roll 5d6>=5 --log "Sessions/Session 03.md"
   rpg-roll 1d20 1d20            (several expressions in one call)
+  rpg-roll 1d20 --secret --label "gm check" --log "Sessions/Session 03.md"
+
+--secret is for GM-style campaigns: the result is printed for the GM and sealed
+in .solo-rpg/sealed.jsonl, the audit trail keeps only its hash, and the session
+log says only that the GM rolled.
 
 Run `rpg-roll --help-notation` for the full dice notation.
 """
@@ -31,6 +36,8 @@ def main(argv=None) -> int:
     ap.add_argument("--check", help="compare total, e.g. '>=8', '<=45'; prints PASS/FAIL and margin")
     ap.add_argument("--log", help="markdown file to append the result to")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
+    ap.add_argument("--secret", action="store_true",
+                    help="GM roll the characters don't know about: seal the result, log only that a roll was made")
     ap.add_argument("--seed", type=int, help="TESTING ONLY: deterministic seed")
     ap.add_argument("--help-notation", action="store_true", help="print dice notation reference")
     a = ap.parse_args(argv)
@@ -69,8 +76,14 @@ def main(argv=None) -> int:
         if a.seed is not None:
             line += " [SEEDED TEST ROLL]"
             rec["seeded"] = True
-        common.audit({"type": "roll", **rec})
-        common.append_log(a.log, f"- {line}")
+        if a.secret:
+            rec["sealed"] = common.seal({"type": "roll", **rec}, a.label)
+            line += " [SECRET]"
+            public = "- 🔒 GM rolled (hidden)" + (f" — _{a.label}_" if a.label else "")
+            common.append_log(a.log, public)
+        else:
+            common.audit({"type": "roll", **rec})
+            common.append_log(a.log, f"- {line}")
         out.append((line, rec))
 
     if a.json:

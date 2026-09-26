@@ -93,6 +93,9 @@ exist at launch to be watched) and after `vault-setup` writes `.claude/agents/ru
 
 - Every roll and table result is appended to `<vault>/.solo-rpg/audit.jsonl` by the scripts.
   Vault settings deny Claude edits to that file and to `.obsidian/`.
+- Secret rolls (`--secret`, for the planned GM style) go to `.solo-rpg/sealed.jsonl`, with
+  only their hash in the audit trail. `rpg-sealed verify` checks the two match without
+  showing any result, and `rpg-sealed show` reveals them.
 - Tables are data. `rpg-table validate` proves there are no gaps or overlaps.
   `rpg-table verify-report` gives you a proof-reading checklist against the book, and
   `rpg-table mark-verified` records your sign-off.

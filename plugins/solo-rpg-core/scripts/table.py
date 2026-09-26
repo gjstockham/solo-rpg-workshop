@@ -15,6 +15,12 @@ table as transcribed, never from memory.
   rpg-table mark-verified ID [ID ...]
   rpg-table schema                                (print the table file format)
 
+GM-style campaigns:
+  --gm       (any command) also load adventure modules' tables from
+             .solo-rpg/adventures/; without it they are invisible. SOLO_RPG_GM=1 does the same.
+  --secret   (roll, lookup) seal the result in .solo-rpg/sealed.jsonl; the audit trail
+             keeps its hash and the session log says only that the GM rolled.
+
 IDs are 'module/table-id' or just 'table-id' when unambiguous among the
 active modules (those listed in the campaign's solo-rpg.yaml, else all).
 """
@@ -419,11 +425,13 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="rpg-table", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
+    gm = argparse.ArgumentParser(add_help=False)
+    gm.add_argument("--gm", action="store_true", help="include adventure modules' tables (GM campaigns)")
 
-    p = sub.add_parser("list"); p.add_argument("--module"); p.add_argument("--search")
-    p = sub.add_parser("show"); p.add_argument("id")
+    p = sub.add_parser("list", parents=[gm]); p.add_argument("--module"); p.add_argument("--search")
+    p = sub.add_parser("show", parents=[gm]); p.add_argument("id")
     for name in ("roll", "lookup"):
-        p = sub.add_parser(name)
+        p = sub.add_parser(name, parents=[gm])
         p.add_argument("id")
         if name == "lookup":
             p.add_argument("value", type=int)
@@ -434,18 +442,22 @@ def main(argv=None) -> int:
         p.add_argument("--log")
         p.add_argument("--json", action="store_true")
         p.add_argument("--seed", type=int, help="TESTING ONLY")
+        p.add_argument("--secret", action="store_true",
+                       help="GM roll the characters don't know about: seal the result, log only that a roll was made")
     p = sub.add_parser("pick")
     p.add_argument("--items", nargs="+"); p.add_argument("--dir")
     p.add_argument("--where", nargs="*"); p.add_argument("--weight")
     p.add_argument("--count", type=int, default=1); p.add_argument("--replace", action="store_true")
     p.add_argument("--label", default=""); p.add_argument("--log"); p.add_argument("--json", action="store_true")
     p.add_argument("--seed", type=int, help="TESTING ONLY")
-    p = sub.add_parser("validate"); p.add_argument("files", nargs="*"); p.add_argument("--module")
+    p = sub.add_parser("validate", parents=[gm]); p.add_argument("files", nargs="*"); p.add_argument("--module")
     p.add_argument("-v", "--verbose", action="store_true")
-    p = sub.add_parser("verify-report"); p.add_argument("--module")
-    p = sub.add_parser("mark-verified"); p.add_argument("ids", nargs="+")
+    p = sub.add_parser("verify-report", parents=[gm]); p.add_argument("--module")
+    p = sub.add_parser("mark-verified", parents=[gm]); p.add_argument("ids", nargs="+")
     sub.add_parser("schema")
     a = ap.parse_args(argv)
+    if getattr(a, "gm", False):
+        common.GM_MODE = True
 
     if a.cmd == "schema":
         print(SCHEMA)
@@ -517,14 +529,22 @@ def main(argv=None) -> int:
         forced = a.value if a.cmd == "lookup" else None
         entries = do_roll(tables, t, a.mod, a.column, forced=forced)
         all_entries.append(entries)
-        for e in entries:
-            common.audit({"type": "table", "label": a.label, "seeded": a.seed is not None, **e})
         text = "\n".join(fmt_entry(e) for e in entries)
         if a.label:
             text += f" — _{a.label}_"
         if a.seed is not None:
             text += " [SEEDED TEST ROLL]"
-        common.append_log(a.log, "\n".join(f"- {ln}" if i == 0 else f"  {ln}" for i, ln in enumerate(text.splitlines())))
+        if a.secret:
+            # One sealed record per roll, chained results included, so the
+            # table's title never reaches the audit trail or the session log.
+            common.seal({"type": "table", "label": a.label, "seeded": a.seed is not None,
+                         "entries": entries}, a.label)
+            text += " [SECRET]"
+            common.append_log(a.log, "- 🔒 GM rolled on a table (hidden)" + (f" — _{a.label}_" if a.label else ""))
+        else:
+            for e in entries:
+                common.audit({"type": "table", "label": a.label, "seeded": a.seed is not None, **e})
+            common.append_log(a.log, "\n".join(f"- {ln}" if i == 0 else f"  {ln}" for i, ln in enumerate(text.splitlines())))
         if not a.json:
             print(text)
     if a.json:

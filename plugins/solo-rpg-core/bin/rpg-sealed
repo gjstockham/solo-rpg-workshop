@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Wrapper so every plugin (and you, in a terminal) can call rpg-sealed from PATH.
+# Override the interpreter with SOLO_RPG_PYTHON if python3 is not the right one.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PY="${SOLO_RPG_PYTHON:-$(command -v python3 || command -v python || command -v py)}"
+if [ -z "$PY" ]; then echo "rpg-sealed: no python found (set SOLO_RPG_PYTHON)" >&2; exit 127; fi
+export PYTHONIOENCODING=utf-8
+exec "$PY" "$DIR/../scripts/sealed.py" "$@"

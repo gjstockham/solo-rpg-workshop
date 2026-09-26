@@ -3,8 +3,10 @@ discovery, campaign config, audit trail and session-log appends."""
 from __future__ import annotations
 
 import datetime as _dt
+import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -15,6 +17,18 @@ except ImportError:  # pragma: no cover
 
 CAMPAIGN_FILE = "solo-rpg.yaml"
 AUDIT_DIR = ".solo-rpg"
+SEALED_FILE = "sealed.jsonl"
+ADVENTURES_DIR = Path(AUDIT_DIR) / "adventures"
+ADVENTURE_FILE = "adventure.yaml"
+
+# GM-style campaigns keep adventure modules under .solo-rpg/adventures/. Their
+# tables are only visible when this is on (rpg-table --gm, or SOLO_RPG_GM=1),
+# so a plain `rpg-table list` never shows the player an adventure's tables.
+GM_MODE = False
+
+
+def gm_mode() -> bool:
+    return GM_MODE or os.environ.get("SOLO_RPG_GM", "").lower() in ("1", "true", "yes")
 
 
 def load_data(path: Path) -> Any:
@@ -103,27 +117,49 @@ def campaign_config() -> Dict[str, Any]:
     return cfg
 
 
+def _manifest_id(d: Path, manifest: str) -> str:
+    try:
+        return str((load_data(d / manifest) or {}).get("id", d.name))
+    except Exception:
+        return d.name
+
+
 def module_dirs(only: Optional[List[str]] = None) -> Dict[str, Path]:
     """Map module id -> skill dir for every skill in the vault with a module.yaml.
 
     If `only` is None and a campaign config lists modules, restrict to those.
+    In GM mode, adventure modules (.solo-rpg/adventures/<id>/adventure.yaml) are
+    included too. The campaign's `modules:` list doesn't name adventures, so it
+    doesn't filter them; an explicit `only` does.
     """
+    explicit = only
     if only is None:
         only = campaign_config().get("modules") or None
     out: Dict[str, Path] = {}
     root = modules_root()
-    if not root.exists():
-        return out
-    for d in sorted(root.iterdir()):
-        if (d / "module.yaml").exists():
-            mid = d.name
-            try:
-                mid = (load_data(d / "module.yaml") or {}).get("id", d.name)
-            except Exception:
-                pass
-            if only and mid not in only and d.name not in only:
+    if root.exists():
+        for d in sorted(root.iterdir()):
+            if (d / "module.yaml").exists():
+                mid = _manifest_id(d, "module.yaml")
+                if only and mid not in only and d.name not in only:
+                    continue
+                out[mid] = d
+    if gm_mode():
+        for mid, d in adventure_dirs().items():
+            if explicit and mid not in explicit and d.name not in explicit:
                 continue
-            out[mid] = d
+            out.setdefault(mid, d)
+    return out
+
+
+def adventure_dirs() -> Dict[str, Path]:
+    """Map adventure id -> dir for every adventure module in the vault."""
+    root = vault_root() / ADVENTURES_DIR
+    out: Dict[str, Path] = {}
+    if root.exists():
+        for d in sorted(root.iterdir()):
+            if (d / ADVENTURE_FILE).exists():
+                out[_manifest_id(d, ADVENTURE_FILE)] = d
     return out
 
 
@@ -145,6 +181,37 @@ def audit(record: Dict[str, Any]) -> None:
     record = {"ts": now(), **record}
     with open(d / "audit.jsonl", "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _sealed_line(record: Dict[str, Any]) -> str:
+    return json.dumps(record, ensure_ascii=False, sort_keys=True)
+
+
+def seal_hash(line: str) -> str:
+    return hashlib.sha256(line.encode("utf-8")).hexdigest()
+
+
+def seal(record: Dict[str, Any], label: str = "") -> Optional[str]:
+    """Record a secret result: the full record goes to .solo-rpg/sealed.jsonl, and
+    audit.jsonl gets only a stub carrying the SHA-256 of that sealed line.
+
+    The stubs let `rpg-sealed verify` prove, without showing any result, that no
+    sealed line was edited, added or removed. Returns the hash, or None outside
+    a campaign (nothing is written; a warning goes to stderr).
+    """
+    root = find_campaign()
+    if not root:
+        print("warning: not in a campaign (no solo-rpg.yaml); secret result not sealed",
+              file=sys.stderr)
+        return None
+    d = root / AUDIT_DIR
+    d.mkdir(exist_ok=True)
+    line = _sealed_line({"ts": now(), **record})
+    digest = seal_hash(line)
+    with open(d / SEALED_FILE, "a", encoding="utf-8") as f:
+        f.write(line + "\n")
+    audit({"type": record.get("type", "roll"), "secret": True, "label": label, "sha256": digest})
+    return digest
 
 
 def append_log(path: Optional[str], line: str) -> None:

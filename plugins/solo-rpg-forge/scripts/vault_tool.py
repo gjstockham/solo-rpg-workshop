@@ -76,9 +76,10 @@ def merge_settings(path: Path, dry):
         if r not in allow:
             allow.append(r)
     deny = perms.setdefault("deny", [])
-    # The audit trail is tamper-evident, so Claude may append to it through the
-    # scripts but never edit it. Obsidian's own config is the player's.
-    for r in ["Edit(./.obsidian/**)", "Edit(./.solo-rpg/audit.jsonl)"]:
+    # The audit trail and the sealed log of secret rolls are tamper-evident, so
+    # Claude may append to them through the scripts but never edit them.
+    # Obsidian's own config is the player's.
+    for r in ["Edit(./.obsidian/**)", "Edit(./.solo-rpg/audit.jsonl)", "Edit(./.solo-rpg/sealed.jsonl)"]:
         if r not in deny:
             deny.append(r)
     txt = json.dumps(s, indent=2) + "\n"
